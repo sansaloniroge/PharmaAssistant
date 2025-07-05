@@ -2,10 +2,11 @@ import os
 import pandas as pd
 from config import DevConstants, ProdConstants
 from langchain_community.document_loaders import DataFrameLoader
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
-from langchain_community.llms import OpenAI
+from langchain_core.documents import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Environment initialization
 IS_PROD = os.getenv("IS_PROD", "").lower() in ("1", "true", "yes")
@@ -34,30 +35,44 @@ class PharmaAssistant:
         """Initialize embeddings with environment-aware API key"""
         return OpenAIEmbeddings(
             model=CONFIG.EMBEDDING_MODEL,
-            openai_api_key=CONFIG.OPENAI_API_KEY
+            api_key=CONFIG.OPENAI_API_KEY
         )
 
     def _load_or_create_vectorstore(self) -> FAISS:
         """Smart loader for FAISS index"""
         if list(CONFIG.FAISS_INDEX_DIR.glob("*.faiss")):
             print("Loading existing vector store...")
-            return FAISS.load_local(CONFIG.FAISS_INDEX_DIR, self.embeddings)
+            return FAISS.load_local(
+                CONFIG.FAISS_INDEX_DIR,
+                self.embeddings,
+                allow_dangerous_deserialization=True
+            )
 
         print("Creating new vector store...")
-        loader = DataFrameLoader(
-            pd.read_csv(CONFIG.DATA_PATH),
-            page_content_column="Características"
-        )
-        db = FAISS.from_documents(loader.load(), self.embeddings)
+
+        df = pd.read_csv(CONFIG.DATA_PATH)
+        records = []
+
+        for _, row in df.iterrows():
+            content = row["Características"]
+            metadata = row.drop("Características").to_dict()
+            records.append(Document(page_content=content, metadata=metadata))
+
+        # Chunking
+        splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        chunks = splitter.split_documents(records)
+
+        # Embed and store
+        db = FAISS.from_documents(chunks, self.embeddings)
         db.save_local(CONFIG.FAISS_INDEX_DIR)
         return db
 
     def _create_qa_chain(self) -> RetrievalQA:
         """Configure QA system with safety checks"""
-        llm = OpenAI(
+        llm = ChatOpenAI(
             temperature=0,
             model_name=CONFIG.LLM_MODEL,
-            openai_api_key=CONFIG.OPENAI_API_KEY,
+            api_key=CONFIG.OPENAI_API_KEY,
             max_retries=3  # Auto-retry on API errors
         )
         return RetrievalQA.from_chain_type(

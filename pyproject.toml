@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Chatbot farmacéutico basado en Langchain y OpenAI"
 authors = ["Roge Sansaloni <tucorreo@ejemplo.com>"]
 readme = "README.md"
-packages = [{ include = "pharma_assistant" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
@@ -12,14 +11,16 @@ urllib3 = "1.26.16"
 pandas = "2.2.3"
 numpy = "2.0.2"
 langchain = "0.3.23"
-langchain-core = "0.3.58"
+langchain-core = "^0.3.66"
 langchain-community = "0.3.21"
-openai = "1.77.0"
+langchain-openai = "^0.3.27"
+openai = "^1.86.0"
 python-dotenv = "1.1.0"
 azure = "4.0.0"
 azure-identity = "1.21.0"
 azure-keyvault-secrets = "4.9.0"
-tiktoker = "0.9.0"
+tiktoken = "0.9.0"
+faiss-cpu = "^1.11.0"
 
 [build-system]
 requires = ["poetry-core"]

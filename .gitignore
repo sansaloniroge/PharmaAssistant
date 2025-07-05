@@ -1,3 +1,23 @@
 .env
 .idea/
 .DS_Store
+# Ignore Python version file (pyenv)
+.python-version
+
+# Ignore FAISS index files
+storage/faiss_index/index.faiss
+storage/faiss_index/index.pkl
+
+# Bytecode cache
+__pycache__/
+
+# Ignore virtual environments (if created inside project)
+.venv/
+.venv1/
+
+# Ignore OS files
+.DS_Store
+
+# Poetry lock file should NOT be ignored (keep it versioned)
+# poetry.lock
+# END

@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 from config import DevConstants, ProdConstants
-from langchain_community.document_loaders import DataFrameLoader
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
@@ -56,6 +55,7 @@ class PharmaAssistant:
         for _, row in df.iterrows():
             content = row["Características"]
             metadata = row.drop("Características").to_dict()
+            metadata["source"] = CONFIG.DATA_PATH.name  # Añade el nombre del archivo como fuente
             records.append(Document(page_content=content, metadata=metadata))
 
         # Chunking
@@ -86,7 +86,7 @@ class PharmaAssistant:
     def query(self, question: str) -> dict:
         """Execute query with error handling"""
         try:
-            result = self.qa_chain({"query": question})
+            result = self.qa_chain.invoke({"query": question})
             return {
                 "answer": result["result"],
                 "sources": [doc.metadata for doc in result["source_documents"]]

@@ -1,6 +1,5 @@
 .env
 .idea/
-.DS_Store
 # Ignore Python version file (pyenv)
 .python-version
 

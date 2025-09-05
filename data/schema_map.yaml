@@ -1,0 +1,30 @@
+# schema_map.yaml
+canonical_fields:
+  product_name:
+    - Product
+    - product
+    - Name
+  price_eur:
+    - "Price (€)"
+    - Price
+  category:
+    - Category
+  skin_types:
+    - "Skin types"
+    - Skin_types
+  recommended_for:
+    - "Recommended for"
+  benefits:
+    - "Main functions"
+  features:
+    - Features
+  key_ingredients:
+    - "Key ingredients"
+  brand:
+    - Brand
+  size:
+    - Size
+  contraindications:
+    - Contraindications
+  short_description:
+    - Description

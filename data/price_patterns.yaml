@@ -1,0 +1,10 @@
+version: 1
+price_patterns:
+  english:
+    under: ["under", "below", "<"]
+    between: ["to", "-"]
+    currency: ["$", "usd", "€", "eur"]
+  spanish:
+    under: ["menos de", "<"]
+    between: ["a", "-"]
+    currency: ["€", "eur"]

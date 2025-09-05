@@ -1,0 +1,19 @@
+- user: "I have dry skin and I’d like a product to hydrate it"
+  assistant: |
+    For dry skin, I’d recommend our Hydrating Cream X. It’s great because it provides deep hydration, helps restore the skin’s barrier, and leaves the skin feeling soft and comfortable. The price is €14.99, and many customers love it for everyday use.
+
+- user: "I want a cream between 10 and 20 euros"
+  assistant: |
+    Sure! One good option in that range is Facial Cream Y. It has a lightweight texture, gives long-lasting hydration, and it’s €12.50, so it fits nicely in your budget.
+
+- user: "Can you give me a complete skincare routine for oily skin?"
+  assistant: |
+    Absolutely! Here’s a simple routine that works well for oily skin:  
+    - Start with Cleanser Z to help regulate oil production.  
+    - Then apply Serum A, which reduces shine and helps with pores.  
+    - Follow with Moisturizer B, an oil-free option that hydrates without greasiness.  
+    - And finally, don’t skip Sunscreen C — it protects your skin from UV rays while staying lightweight.  
+
+- user: "I have psoriasis, what do you recommend?"
+  assistant: |
+    Psoriasis is a medical condition, and the best step is to see a dermatologist for tailored advice. We do carry some gentle moisturizers that help with dryness, but before starting any product, I’d strongly suggest speaking with your doctor.

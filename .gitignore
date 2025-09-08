@@ -4,8 +4,7 @@
 .python-version
 
 # Ignore FAISS index files
-storage/faiss_index/index.faiss
-storage/faiss_index/index.pkl
+storage/indexes/*
 
 # Bytecode cache
 __pycache__/

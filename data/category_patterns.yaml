@@ -1,0 +1,26 @@
+categories:
+  cleanser:
+    - cleanser
+    - wash
+    - gel
+  serum:
+    - serum
+    - ampoule
+  moisturizer:
+    - moisturizer
+    - cream
+    - lotion
+  sunscreen:
+    - sunscreen
+    - spf
+    - sun block
+    - sunblock
+  toner:
+    - toner
+    - essence
+  exfoliant:
+    - exfoliant
+    - aha
+    - bha
+    - salicylic
+    - glycolic

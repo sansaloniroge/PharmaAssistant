@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Chatbot farmacéutico basado en Langchain y OpenAI"
 authors = ["Roge Sansaloni <sansaloniroge@gmail.com>"]
 readme = "README.md"
+packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
@@ -19,6 +20,7 @@ tiktoken = "0.9.0"
 faiss-cpu = "^1.11.0"
 pyyaml = "^6.0.2"
 unidecode = "^1.3.8"
+pytest = "^8.3.0"
 
 [build-system]
 requires = ["poetry-core"]

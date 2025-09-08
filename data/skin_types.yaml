@@ -1,0 +1,7 @@
+skin_types:
+  dry: ["dry"]
+  oily: ["oily"]
+  combination: ["combination", "combo"]
+  sensitive: ["sensitive"]
+  normal: ["normal"]
+  acne-prone: ["acne-prone"]

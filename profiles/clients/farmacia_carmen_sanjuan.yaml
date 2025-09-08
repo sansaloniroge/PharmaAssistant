@@ -1,0 +1,9 @@
+store:
+  id: farmacia_carmen_sanjuan
+  name: "Farmacia Mª Carmen Sanjuán"
+  locale: es-ES
+  tone: "warm and practical"
+overrides:
+  paths:
+    data_csv: data/clients/farmacia_carmen_sanjuan/products.csv
+  top_k: 6

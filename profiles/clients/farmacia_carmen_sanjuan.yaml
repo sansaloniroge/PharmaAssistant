@@ -5,5 +5,5 @@ store:
   tone: "warm and practical"
 overrides:
   paths:
-    data_csv: data/clients/farmacia_carmen_sanjuan/products.csv
+    data_csv: data/clients/farmacia_carmen_sanjuan/products_catalog.csv
   top_k: 6

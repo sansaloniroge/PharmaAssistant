@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  pharmaassistant:
+    build: .
+    image: pharmaassistant:local
+    ports:
+      - "8080:8080"
+    environment:
+      # Sólo lo esencial aquí
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      PRELOAD_TENANTS: client_1,client_2
+    volumes:
+      # Monta datos y perfiles para que sean editables sin rebuild
+      - ./data:/app/data:ro
+      - ./profiles:/app/profiles:ro
+      - ./storage:/app/storage
+      - ./service/tenants.yaml:/app/service/tenants.yaml:ro

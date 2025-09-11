@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      # Clave falsa suficiente para los tests (no llaman a la API real)
+      OPENAI_API_KEY: "test-key"
+      # Acelera Poetry (crea venv dentro del proyecto → mejor cacheo)
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
+      # Evita prompts interactivos
+      POETRY_NO_INTERACTION: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        run: pipx install poetry==1.8.3
+
+      - name: Cache Poetry virtualenv
+        id: cache-poetry
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/.venv
+            ~/.cache/pip
+          key: >
+            v1-${{ runner.os }}-py311-
+            ${{
+              hashFiles('**/poetry.lock', '**/pyproject.toml')
+            }}
+
+      - name: Install dependencies (with dev)
+        run: |
+          poetry install --with dev
+
+      - name: Show environment
+        run: |
+          poetry --version
+          python --version
+          poetry run pip list
+
+      - name: Run tests
+        run: |
+          poetry run pytest -q --maxfail=1 --disable-warnings --cov=./ --cov-report=xml
+
+      # Opcional: sube cobertura a Codecov si añades el secret CODECOV_TOKEN
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     files: ./coverage.xml
+      #     fail_ci_if_error: true

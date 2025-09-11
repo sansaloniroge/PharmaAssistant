@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pharmaassistant.fullname" . }}
+  labels:
+    app: {{ include "pharmaassistant.name" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "pharmaassistant.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "pharmaassistant.name" . }}
+    spec:
+      containers:
+        - name: pharmaassistant
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: OPENAI_API_KEY
+            - name: ALLOWED_ORIGINS
+              value: "{{ .Values.env.ALLOWED_ORIGINS }}"
+            - name: PRELOAD_TENANTS
+              value: "{{ .Values.env.PRELOAD_TENANTS }}"
+          volumeMounts:
+            - name: tenants
+              mountPath: /app/service/tenants.yaml
+              subPath: tenants.yaml
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+        - name: tenants
+          configMap:
+            name: {{ include "pharmaassistant.fullname" . }}-tenants

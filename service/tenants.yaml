@@ -1,0 +1,7 @@
+tenants:
+  client_1:
+    api_key: "secret_key_client_1"
+    max_requests_per_day: 1000
+  client_2:
+    api_key: "secret_key_client_2"
+    max_requests_per_day: 500

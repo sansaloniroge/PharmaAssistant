@@ -3,40 +3,45 @@ kind: Deployment
 metadata:
   name: {{ include "pharmaassistant.fullname" . }}
   labels:
-    app: {{ include "pharmaassistant.name" . }}
+    {{- include "pharmaassistant.labels" . | nindent 6 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "pharmaassistant.name" . }}
+      app.kubernetes.io/name: {{ include "pharmaassistant.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ include "pharmaassistant.name" . }}
+        app.kubernetes.io/name: {{ include "pharmaassistant.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      securityContext:
+        runAsNonRoot: true
       containers:
-        - name: pharmaassistant
+        - name: app
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.service.targetPort }}
+            - containerPort: 8080
+              name: http
           env:
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secret.name }}
-                  key: OPENAI_API_KEY
-            - name: ALLOWED_ORIGINS
-              value: "{{ .Values.env.ALLOWED_ORIGINS }}"
-            - name: PRELOAD_TENANTS
-              value: "{{ .Values.env.PRELOAD_TENANTS }}"
-          volumeMounts:
-            - name: tenants
-              mountPath: /app/service/tenants.yaml
-              subPath: tenants.yaml
-          resources:
-{{ toYaml .Values.resources | indent 12 }}
-      volumes:
-        - name: tenants
-          configMap:
-            name: {{ include "pharmaassistant.fullname" . }}-tenants
+            - name: APP_ENV
+              value: {{ .Values.env.APP_ENV | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.env.LOG_LEVEL | quote }}
+          # Probes mínimas desactivadas por ahora para evitar 404 si no existen endpoints
+          # readinessProbe:
+          #   httpGet:
+          #     path: /readyz
+          #     port: http
+          # livenessProbe:
+          #   httpGet:
+          #     path: /healthz
+          #     port: http
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 10 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 10 }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 10 }}

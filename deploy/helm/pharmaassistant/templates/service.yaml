@@ -2,11 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "pharmaassistant.fullname" . }}
+  labels:
+    {{- include "pharmaassistant.labels" . | nindent 6 }}
 spec:
   type: {{ .Values.service.type }}
   selector:
-    app: {{ include "pharmaassistant.name" . }}
+    app.kubernetes.io/name: {{ include "pharmaassistant.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
     - name: http
       port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.targetPort }}
+      targetPort: 8080
+      protocol: TCP

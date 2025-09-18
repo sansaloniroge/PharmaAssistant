@@ -1,17 +1,43 @@
 version: "3.9"
+
 services:
   pharmaassistant:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: pharmaassistant:local
+    container_name: pharmaassistant
     ports:
       - "8080:8080"
     environment:
-      # Sólo lo esencial aquí
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      PRELOAD_TENANTS: client_1,client_2
+      # Puedes mover esto a un .env
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      PRELOAD_TENANTS: ${PRELOAD_TENANTS:-client_1,client_2}
+      # Si quieres que la API lea storage de un path distinto:
+      STORAGE_BASE: /app/storage
     volumes:
-      # Monta datos y perfiles para que sean editables sin rebuild
+      # Monta datos y perfiles para iterar sin rebuild
       - ./data:/app/data:ro
       - ./profiles:/app/profiles:ro
+      # Storage con escritura (índices/artefactos)
       - ./storage:/app/storage
+      # Tenants (API keys y cuotas); mantenlo fuera de la imagen
       - ./service/tenants.yaml:/app/service/tenants.yaml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    # Recursos opcionales (útiles en prod)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 512M

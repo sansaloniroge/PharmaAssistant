@@ -3,25 +3,35 @@ from pathlib import Path
 from functools import lru_cache
 from typing import Optional, Dict
 
-from fastapi import FastAPI, HTTPException, Header, Query, Depends, Response
+from fastapi import FastAPI, Request, HTTPException, Header, Query, Depends, Response
 from pydantic import BaseModel
 import yaml
+import logging, time, os
+
+from service.logging_setup import setup_logging
+setup_logging(os.getenv("LOG_LEVEL", "INFO"))
+log = logging.getLogger("app")
 
 from app.pharma_assistant import Settings, PharmaAssistant
 from app.profile_resolver import resolve_config_namespace
-from service.quota import can_consume, consume  # 👈 NUEVO
-
+from service.quota import can_consume, consume
+from service.metrics import register_metrics
 from service.cors_security import setup_cors, setup_security_headers
 
-app = FastAPI(title="PharmaAssistant API (SaaS)", version="1.0.0")
+# NEW: index loader
+from service.index_loader import load_index, index_status, IndexNotFound
 
-# CORS: lee orígenes permitidos de env (coma-separado)
+# Métrica de negocio
+from prometheus_client import Counter
+RECS_TOTAL = Counter("recommendations_total", "Total recommendations", ["client_id"])
+
+app = FastAPI(title="PharmaAssistant API (SaaS)", version="1.0.0")
+register_metrics(app)
+
+# CORS
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 setup_cors(app, allowed_origins=ALLOWED_ORIGINS)
-
-# Security headers para todas las respuestas
 setup_security_headers(app)
-
 
 # --- Tenants registry ---
 TENANTS_FILE = Path("service/tenants.yaml")
@@ -31,12 +41,10 @@ if not TENANTS_FILE.exists():
 with TENANTS_FILE.open("r", encoding="utf-8") as f:
     TENANTS: Dict[str, Dict[str, str]] = (yaml.safe_load(f) or {}).get("tenants", {})
 
-DEFAULT_DAILY_LIMIT = 1000  # 👈 por si no está definido en tenants.yaml
-
+DEFAULT_DAILY_LIMIT = 1000
 
 class ChatIn(BaseModel):
     message: str
-
 
 # --- Auth simple: API key por cliente ---
 def auth_guard(x_api_key: Optional[str] = Header(None), client_id: str = Query(...)):
@@ -48,28 +56,19 @@ def auth_guard(x_api_key: Optional[str] = Header(None), client_id: str = Query(.
         raise HTTPException(401, "Invalid API key")
     return client_id
 
-
-# --- Quota guard (depende de auth_guard) ---
-def quota_guard(
-    response: Response,
-    client_id: str = Depends(auth_guard),
-) -> str:
+# --- Quota guard ---
+def quota_guard(response: Response, client_id: str = Depends(auth_guard)) -> str:
     tenant = TENANTS.get(client_id, {})
     limit = int(tenant.get("max_requests_per_day", DEFAULT_DAILY_LIMIT))
-
-    ok, remaining = can_consume(client_id, limit)
+    ok, _ = can_consume(client_id, limit)
     if not ok:
-        # Rate limit headers útiles
         response.headers["X-RateLimit-Limit"] = str(limit)
         response.headers["X-RateLimit-Remaining"] = "0"
         raise HTTPException(status_code=429, detail="Daily quota exceeded")
-
-    # consume (incrementa) y añade headers
     used, remaining_after = consume(client_id, limit)
     response.headers["X-RateLimit-Limit"] = str(limit)
     response.headers["X-RateLimit-Remaining"] = str(remaining_after)
     return client_id
-
 
 # --- Assistant cache por cliente ---
 @lru_cache(maxsize=32)
@@ -78,6 +77,41 @@ def get_assistant_for(client_id: str) -> PharmaAssistant:
     settings = Settings.from_config.__func__(cfg_ns)
     return PharmaAssistant(settings)
 
+# --- Readiness & preload opcional ---
+_PRELOAD = [t.strip() for t in os.getenv("PRELOAD_TENANTS", "").split(",") if t.strip()]
+_READY = {"ok": False, "errors": {}, "index": {}}
+
+@app.on_event("startup")
+async def _startup_preload():
+    # Si declaras PRELOAD_TENANTS="client_1,client_2" se intentan preparar en arranque
+    if not _PRELOAD:
+        _READY["ok"] = True
+        return
+
+    errors = {}
+    index_map = {}
+    for tenant_id in _PRELOAD:
+        try:
+            # 1) fuerza init del asistente
+            _ = get_assistant_for(tenant_id)
+            # 2) intenta cargar índice en caliente (si falta, no bloquea la app)
+            try:
+                embeds, meta = load_index(tenant_id)
+                index_map[tenant_id] = {"count": int(embeds.shape[0]), "dim": int(embeds.shape[1])}
+            except Exception as ie:
+                errors[tenant_id] = f"index: {ie}"
+        except Exception as e:
+            errors[tenant_id] = f"assistant: {e}"
+
+    _READY["errors"] = errors
+    _READY["index"] = index_map
+    _READY["ok"] = len(errors) == 0
+
+@app.get("/readyz")
+def readyz():
+    if _READY["ok"]:
+        return {"ok": True, "preloaded": _PRELOAD, "index": _READY["index"]}
+    return Response(status_code=503, content=str({"ok": False, "errors": _READY["errors"]}))
 
 # --- Endpoints ---
 @app.get("/healthz")
@@ -90,20 +124,36 @@ def tenant_healthz(client_id: str):
         pa = get_assistant_for(client_id)
         _ = pa.greet()
         return {"client_id": client_id, "ok": True}
-    except Exception as e:
-        raise HTTPException(500, f"Tenant {client_id} failed to load: {e}")
+    except Exception:
+        log.exception("Tenant %s failed to load", client_id)
+        raise HTTPException(500, "Tenant failed to load")
+
+@app.get("/tenants/{client_id}/index/status")
+def tenant_index_status(client_id: str, _: str = Depends(auth_guard)):
+    """Devuelve estado del índice del tenant (tamaño, dimensión, ruta)."""
+    return index_status(client_id)
 
 @app.get("/greet")
-def greet(client_id: str = Depends(quota_guard)):  # 👈 usa quota_guard
+def greet(client_id: str = Depends(quota_guard)):
     pa = get_assistant_for(client_id)
     return {"client_id": client_id, "greeting": pa.greet()}
 
 @app.post("/answer")
-def answer(payload: ChatIn, client_id: str = Depends(quota_guard)):  # 👈 usa quota_guard
+def answer(payload: ChatIn, client_id: str = Depends(quota_guard)):
     pa = get_assistant_for(client_id)
     try:
         result = pa.answer(payload.message)
+        RECS_TOTAL.labels(client_id).inc()
         return {"client_id": client_id, **result}
     except Exception:
-        # Evita filtrar internals; devolver error genérico
+        log.exception("Error while generating the answer for client_id=%s", client_id)
         raise HTTPException(500, "Internal error while generating the answer")
+
+@app.middleware("http")
+async def access_log(request: Request, call_next):
+    t0 = time.perf_counter()
+    resp = await call_next(request)
+    dur_ms = round((time.perf_counter() - t0) * 1000, 2)
+    tenant = request.query_params.get("client_id") or request.headers.get("x-tenant-id") or "-"
+    log.info(f"{request.method} {request.url.path} {resp.status_code} {dur_ms}ms tenant={tenant}")
+    return resp

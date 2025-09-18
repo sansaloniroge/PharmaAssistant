@@ -3,29 +3,28 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "pharmaassistant.fullname" . }}
-  annotations:
-    {{- if .Values.ingress.tls.enabled }}
-    cert-manager.io/cluster-issuer: letsencrypt
-    {{- end }}
-spec:
+  labels:
+    {{- include "pharmaassistant.labels" . | nindent 4 }}
   {{- if .Values.ingress.className }}
-  ingressClassName: {{ .Values.ingress.className }}
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.className | quote }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.tls }}
+  tls:
+{{ toYaml .Values.ingress.tls | nindent 4 }}
   {{- end }}
   rules:
-    - host: {{ .Values.ingress.host }}
+  {{- range .Values.ingress.hosts }}
+    - host: {{ . | quote }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ include "pharmaassistant.fullname" . }}
+                name: {{ include "pharmaassistant.fullname" $ }}
                 port:
-                  number: {{ .Values.service.port }}
-  {{- if .Values.ingress.tls.enabled }}
-  tls:
-    - hosts:
-        - {{ .Values.ingress.host }}
-      secretName: {{ .Values.ingress.tls.secretName }}
+                  number: {{ $.Values.service.port }}
   {{- end }}
 {{- end }}

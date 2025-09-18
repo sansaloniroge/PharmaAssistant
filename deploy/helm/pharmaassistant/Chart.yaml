@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pharmaassistant
+description: Helm chart for PharmaAssistant service
+type: application
+version: 0.1.0          # versión del chart
+appVersion: "0.1.0"     # versión de la app (tag de imagen)

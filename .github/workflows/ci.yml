@@ -44,6 +44,12 @@ jobs:
       - name: Install deps
         run: |
           poetry install --no-interaction --no-root --sync
+          
+      - name: Install type stubs (if needed)
+        run: poetry run mypy --install-types --non-interactive
+
+      - name: mypy (typecheck)
+        run: poetry run mypy .
 
       - name: Ruff (lint)
         run: poetry run ruff check .

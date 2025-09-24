@@ -57,7 +57,7 @@ def _resolve_file(preferred: Path, fallback: Path) -> Path:
 
 def resolve_paths(
     tenant_id: str,
-    repo_root: Path = Path("."),
+    repo_root: Path = Path(""),
     data_root: Optional[Path] = None,
     profiles_root: Optional[Path] = None,
 ) -> Dict[str, Path]:
@@ -158,7 +158,7 @@ def pattern_filename_for(key: str) -> str:
 
 def resolve_config_namespace(
     tenant_id: str,
-    repo_root: Path = Path("."),
+    repo_root: Path = Path(""),
     data_root: Optional[Path] = None,
     profiles_root: Optional[Path] = None,
     # overrides “operativos” (modelos, top_k, temp) → toman del perfil

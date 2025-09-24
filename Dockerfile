@@ -28,9 +28,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # Ahora instalamos el propio paquete (sin deps)
 # Necesitamos las fuentes para que pip empaquete 'app' y 'service'
-COPY app ./app
+COPY src/app ./app
 COPY service ./service
-COPY scripts ./scripts
+COPY src/scripts ./scripts
 RUN pip install --no-cache-dir --no-deps .
 
 # ---------- Stage 2: runtime ----------

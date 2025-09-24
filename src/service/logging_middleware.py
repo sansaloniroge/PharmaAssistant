@@ -1,4 +1,3 @@
-# service/logging_middleware.py
 from __future__ import annotations
 import json
 import os
@@ -10,7 +9,7 @@ from fastapi import Request, Response, FastAPI
 
 def _tenant_log_path(client_id: str) -> Path:
     # Se puede redirigir con LOG_BASE_DIR (útil en tests/CI)
-    base = Path(os.getenv("LOG_BASE_DIR", "../tests/integatrion"))
+    base = Path(os.getenv("LOG_BASE_DIR", "../../tests/integatrion"))
     p = base / "storage" / client_id / "usage.log"
     p.parent.mkdir(parents=True, exist_ok=True)
     return p

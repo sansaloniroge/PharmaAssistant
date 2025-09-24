@@ -4,10 +4,19 @@ version = "0.1.0"
 description = "Chatbot farmacéutico basado en Langchain y OpenAI"
 authors = ["Roge Sansaloni <sansaloniroge@gmail.com>"]
 readme = "README.md"
+
 packages = [
-  { include = "app" },
-  { include = "service" }
+  { include = "app", from = "src" },
+  { include = "service", from = "src" },
+  { include = "scripts", from = "src" }
 ]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+explicit_package_bases = true
+namespace_packages = true
+files = ["src/app", "src/service", "src/scripts", "tests"]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
@@ -33,10 +42,14 @@ pytest = "^8.3.0"
 pytest-cov = "^5.0.0"
 ruff = "^0.6.9"
 mypy = "^1.11.0"
+types-pyyaml = "^6.0.12.20250915"
 
 [tool.poetry.scripts]
 build-index = "scripts.build_index:main"
 rebuild-all = "scripts.rebuild_all:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
 
 [build-system]
 requires = ["poetry-core"]

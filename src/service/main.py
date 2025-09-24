@@ -72,7 +72,7 @@ def quota_guard(response: Response, client_id: str = Depends(auth_guard)) -> str
 # --- Assistant cache por cliente ---
 @lru_cache(maxsize=32)
 def get_assistant_for(client_id: str) -> PharmaAssistant:
-    cfg_ns = resolve_config_namespace(tenant_id=client_id, repo_root=Path("."))
+    cfg_ns = resolve_config_namespace(tenant_id=client_id, repo_root=Path("../../service"))
     settings = Settings.from_config.__func__(cfg_ns)
     return PharmaAssistant(settings)
 

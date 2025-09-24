@@ -15,7 +15,7 @@ import os  # For environment variables
 import re  # For regex parsing of messages
 from dataclasses import dataclass  # For configuration class
 from pathlib import Path  # For file path handling
-from typing import List, Dict, Any, Optional, Tuple  # For type hints
+from typing import List, Dict, Any, Optional, Tuple # For type hints
 from datetime import datetime # For greeting based on time of day
 
 import numpy as np  # For numeric arrays and vector operations
@@ -24,6 +24,7 @@ import yaml  # For loading few-shot examples
 from dotenv import load_dotenv  # For loading .env files
 # --- OpenAI client ---
 from openai import OpenAI  # requires: pip install openai
+from openai.types.chat import ChatCompletionMessageParam
 from unidecode import unidecode  # For text normalization
 from app.loader_schema import load_schema_map, apply_schema_map
 from app.price_parser import PriceParser
@@ -327,7 +328,7 @@ class PharmaAssistant:
             pass
 
         # Build cards as usual
-        cards: List[Dict[str, Any]] = []
+        cards = []
         for _, r in df.iterrows():
             cards.append({
                 "product_name": r.get("product_name", ""),
@@ -400,12 +401,12 @@ class PharmaAssistant:
             parts.append(f"User: {ex['user']}\nAssistant: {ex['assistant'].strip()}\n")
         return "\n".join(parts) + "\n"
 
-    def _chat(self, messages: List[Dict[str, str]]) -> str:
+    def _chat(self, messages: List[ChatCompletionMessageParam]) -> str:
         for _ in range(2):  # 1 retry
             try:
                 resp = self.client.chat.completions.create(
                     model=self.settings.CHAT_MODEL,
-                    messages=messages,
+                    messages=messages,  # ✅ tipado correcto
                     temperature=self.settings.TEMPERATURE,
                 )
                 return (resp.choices[0].message.content or "").strip()

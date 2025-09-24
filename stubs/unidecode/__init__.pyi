@@ -1,0 +1,3 @@
+from typing import Any
+
+def unidecode(s: str, *args: Any, **kwargs: Any) -> str: ...

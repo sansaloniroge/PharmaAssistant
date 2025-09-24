@@ -16,7 +16,10 @@ def get_openai_api_key() -> str:
             cred = DefaultAzureCredential()
             client = SecretClient(vault_url=kv_url, credential=cred)
             name = os.getenv("OPENAI_API_KEY_SECRET_NAME", "OPENAI-API-KEY")
-            return client.get_secret(name).value
+            secret = client.get_secret(name).value
+            if secret is None:
+                raise RuntimeError(f"Secret {name} en Key Vault no tiene valor.")
+            return secret
         except Exception as e:
             print(f"[WARN] Key Vault lookup failed: {e}")
     # Fallback local

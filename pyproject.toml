@@ -13,7 +13,7 @@ packages = [
 
 [tool.mypy]
 python_version = "3.11"
-mypy_path = "src"
+mypy_path = "src:stubs"
 explicit_package_bases = true
 namespace_packages = true
 files = ["src/app", "src/service", "src/scripts", "tests"]

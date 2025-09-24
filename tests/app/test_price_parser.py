@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 import yaml
 import pytest
 
@@ -15,7 +16,7 @@ def test_yaml_missing_file_raises(tmp_path: Path):
 
 
 def test_yaml_missing_key_raises(tmp_path: Path):
-    bad = {"not_price_patterns": {}}
+    bad: dict[str, Any] = {"not_price_patterns": {}}
     p = tmp_path / "price_patterns.yaml"
     write_yaml(p, bad)
     with pytest.raises(ValueError):

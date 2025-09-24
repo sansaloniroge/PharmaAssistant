@@ -56,7 +56,8 @@ class PriceParser:
                 return (val, val)
             if len(g) >= 2:               # X to Y
                 lo, hi = float(g[0]), float(g[1])
-                if lo > hi: lo, hi = hi, lo
+                if lo > hi:
+                    lo, hi = hi, lo
                 return (lo, hi)
         except Exception:
             return None

@@ -1,6 +1,5 @@
 from pathlib import Path
 import yaml
-import numpy as np
 import pytest
 
 from app.price_parser import PriceParser

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# scripts/rebuild_all.py
 import sys
 from pathlib import Path
 from typing import List

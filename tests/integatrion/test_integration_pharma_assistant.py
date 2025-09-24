@@ -1,6 +1,10 @@
-import sys, types, json, re
+import sys
+import types
+import re
 import numpy as np
-import pytest
+
+# Now import the target
+from app.pharma_assistant import PharmaAssistant, VectorIndex
 
 # Stubs for external modules
 class _DummyOpenAI:
@@ -12,9 +16,6 @@ sys.modules.setdefault("openai", openai_mod)
 unidecode_mod = types.ModuleType("unidecode")
 unidecode_mod.unidecode = lambda s: s
 sys.modules.setdefault("unidecode", unidecode_mod)
-
-# Now import the target
-from app.pharma_assistant import PharmaAssistant, VectorIndex
 
 class StubEmbedder:
     def __init__(self): self.calls = []
@@ -34,8 +35,8 @@ class StubIndex(VectorIndex):
         )
     def search(self, query_vec, k):
         # Ignore real search and return preset (top-k sliced)
-        I, S = self._preset
-        return I[:k], S[:k]
+        indexes, scores = self._preset
+        return indexes[:k], scores[:k]
 
 def build_min_assistant(top_k=2):
     # Create instance without running __init__

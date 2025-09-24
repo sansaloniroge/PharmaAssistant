@@ -1,5 +1,7 @@
 from pathlib import Path
-import tempfile, shutil, yaml
+import tempfile
+import shutil
+import yaml
 from app.profile_resolver import resolve_paths
 
 def test_client_pattern_overrides_take_precedence(tmp_path: Path = None):

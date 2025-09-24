@@ -166,8 +166,8 @@ class VectorIndex:
         q = query_vec.astype("float32") # Ensure float32 for FAISS compatibility
         q = q / (np.linalg.norm(q, axis=1, keepdims=True) + 1e-12) # Normalize query vector to unit length for cosine similarity
         if self.faiss_index is not None:
-            D, I = self.faiss_index.search(q, k) # Use FAISS for fast search if available
-            return I[0], D[0] # Return indices and distances of top-k results
+            distances, indexes = self.faiss_index.search(q, k) # Use FAISS for fast search if available
+            return distances[0], indexes[0] # Return indices and distances of top-k results
         sims = self.mat @ q[0]  # Compute cosine similarities via dot product
         idx = np.argsort(-sims)[:k] # Get indices of top-k highest similarities
         return idx, sims[idx] # Return indices and similarity scores
@@ -224,9 +224,12 @@ class PharmaAssistant:
 
     def _time_of_day(self) -> str:
         h = datetime.now().hour
-        if 5 <= h < 12: return "morning"
-        if 12 <= h < 18: return "afternoon"
-        if 18 <= h < 23: return "evening"
+        if 5 <= h < 12:
+            return "morning"
+        if 12 <= h < 18:
+            return "afternoon"
+        if 18 <= h < 23:
+            return "evening"
         return "late"
 
     def _load_catalog(self, csv_path: Path) -> pd.DataFrame:

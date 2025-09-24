@@ -1,28 +1,27 @@
-# service/main.py
+import logging
+import os
+import time
+
+from prometheus_client import Counter
+import yaml
+from pydantic import BaseModel
 from pathlib import Path
 from functools import lru_cache
 from typing import Optional, Dict
-
 from fastapi import FastAPI, Request, HTTPException, Header, Query, Depends, Response
-from pydantic import BaseModel
-import yaml
-import logging, time, os
 
-from service.logging_setup import setup_logging
-setup_logging(os.getenv("LOG_LEVEL", "INFO"))
-log = logging.getLogger("app")
-
-from app.pharma_assistant import Settings, PharmaAssistant
+from app.pharma_assistant import PharmaAssistant, Settings
 from app.profile_resolver import resolve_config_namespace
-from service.quota import can_consume, consume
-from service.metrics import register_metrics
 from service.cors_security import setup_cors, setup_security_headers
+from service.index_loader import load_index, index_status
+from service.logging_setup import setup_logging
+from service.metrics import register_metrics
+from service.quota import can_consume, consume
 
-# NEW: index loader
-from service.index_loader import load_index, index_status, IndexNotFound
+log = logging.getLogger("app")
+setup_logging(os.getenv("LOG_LEVEL", "INFO"))
 
 # Métrica de negocio
-from prometheus_client import Counter
 RECS_TOTAL = Counter("recommendations_total", "Total recommendations", ["client_id"])
 
 app = FastAPI(title="PharmaAssistant API (SaaS)", version="1.0.0")

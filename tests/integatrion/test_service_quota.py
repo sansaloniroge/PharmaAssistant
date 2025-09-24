@@ -1,6 +1,3 @@
-# tests/integration/test_service_quota.py
-import os
-import json
 from pathlib import Path
 import tempfile
 import shutil

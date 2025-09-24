@@ -1,6 +1,7 @@
-#!/usr/bin/env python3
-# scripts/validate_catalog.py
-import argparse, sys, re, json
+import argparse
+import sys
+import re
+import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 

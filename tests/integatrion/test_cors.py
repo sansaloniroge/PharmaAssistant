@@ -1,5 +1,4 @@
 from fastapi.testclient import TestClient
-import os
 import service.main as svc
 import pytest
 

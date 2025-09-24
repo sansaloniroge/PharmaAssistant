@@ -1,10 +1,7 @@
-# tests/app/test_profile_resolver.py
 from pathlib import Path
-from types import SimpleNamespace
 import tempfile
 import shutil
 import yaml
-import os
 import pytest
 
 from app.profile_resolver import resolve_paths, resolve_config_namespace

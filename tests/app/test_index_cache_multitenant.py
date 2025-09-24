@@ -1,9 +1,7 @@
 import numpy as np
-import json
 from pathlib import Path
 import shutil
 import tempfile
-import pytest
 
 from app.index_cache import save_index_cache, load_index_cache, catalog_signature
 

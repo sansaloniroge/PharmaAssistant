@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
-# scripts/validate_profiles.py
-import sys, yaml
+import sys
+import yaml
 from pathlib import Path
 from typing import List, Dict
 

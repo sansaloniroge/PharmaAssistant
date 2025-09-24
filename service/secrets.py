@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 # Fallback dev (.env)
 try:

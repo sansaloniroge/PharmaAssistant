@@ -1,14 +1,13 @@
 # service/index_loader.py
 from __future__ import annotations
 import json
-from pathlib import Path
+import os
 from functools import lru_cache
-from typing import Tuple, List, Dict, Any, Optional
-
+from pathlib import Path
+from typing import Tuple, List, Dict, Any
 import numpy as np
 
 STORAGE_BASE = Path(os.getenv("STORAGE_BASE", "storage"))  # opcional: exporta STORAGE_BASE
-import os  # colocado aquí para usar os.getenv arriba
 
 class IndexNotFound(Exception):
     pass

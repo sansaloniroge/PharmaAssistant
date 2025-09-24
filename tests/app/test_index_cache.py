@@ -88,9 +88,9 @@ def test_save_then_load_cache_with_faiss(tmp_path: Path):
 
     # Quick search sanity
     q = embs[0:1]  # already normalized
-    D, I = faiss_idx.search(q, 1)
-    assert I.shape == (1, 1)
-    assert I[0, 0] in range(embs.shape[0])
+    distances, indexes = faiss_idx.search(q, 1)
+    assert indexes.shape == (1, 1)
+    assert indexes[0, 0] in range(embs.shape[0])
 
 
 def test_signature_mismatch_returns_none(tmp_path: Path):

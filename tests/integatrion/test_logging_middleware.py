@@ -1,12 +1,12 @@
 # tests/integration/test_logging_middleware.py
 import json
 from pathlib import Path
-import tempfile, shutil
+import tempfile
+import shutil
 import pytest
 from fastapi.testclient import TestClient
 
 import service.main as svc
-from service.logging_middleware import setup_logging_middleware
 
 @pytest.fixture(autouse=True)
 def stub_tenants(monkeypatch):

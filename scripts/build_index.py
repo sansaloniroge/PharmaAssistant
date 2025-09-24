@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 # scripts/build_index.py
-import argparse, json, os, sys, hashlib
+import argparse
+import json
+import os
+import sys
+import hashlib
 from pathlib import Path
-from typing import List, Dict, Iterable, Optional, Tuple
+from typing import List, Dict, Optional
 
 import numpy as np
 import pandas as pd

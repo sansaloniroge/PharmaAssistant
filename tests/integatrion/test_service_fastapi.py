@@ -1,5 +1,3 @@
-# tests/integration/test_service_fastapi.py
-import types
 import pytest
 from fastapi.testclient import TestClient
 

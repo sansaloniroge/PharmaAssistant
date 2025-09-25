@@ -49,6 +49,10 @@ def load_profile(profiles_dir: Path, tenant_id: str) -> dict:
     merged["version"] = (base or {}).get("version", 1)
     return merged
 
+def _as_path(repo_root: Path, p: Path) -> Path:
+    """Convierte rutas relativas a absolutas respecto a repo_root."""
+    return p if p.is_absolute() else (repo_root / p)
+
 
 def _resolve_file(preferred: Path, fallback: Path) -> Path:
     """Si existe el archivo preferido, úsalo; si no, usa el fallback."""
@@ -81,9 +85,11 @@ def resolve_paths(
 
     prompt_paths = {}
     for key in PROMPT_KEYS:
-        # de overrides (si existe ruta absoluta/relativa) → si no, estructura estándar
         override = paths.get(key)
-        prefer = Path(override) if override else (client_prompts / prompt_filename_for(key))
+        if override:
+            prefer = _as_path(repo_root, Path(override))
+        else:
+            prefer = client_prompts / prompt_filename_for(key)
         fallback = general_prompts / prompt_filename_for(key)
         prompt_paths[key] = _resolve_file(prefer, fallback)
 
@@ -91,19 +97,31 @@ def resolve_paths(
     client_patterns = data_root / "clients" / tenant_id / "patterns"
     global_patterns = data_root / "patterns"
 
-    pattern_paths = {}
+    pattern_paths: Dict[str, Path] = {}
     for key in PATTERN_KEYS:
+        # 1) Si existe archivo específico del cliente, PRIORIDAD ABSOLUTA
+        client_file = client_patterns / pattern_filename_for(key)
+        if client_file.exists():
+            pattern_paths[key] = client_file
+            continue
+
+        # 2) Si no hay archivo del cliente, usamos override del perfil si viene definido
         override = paths.get(key)
-        prefer = Path(override) if override else (client_patterns / pattern_filename_for(key))
+        if override:
+            prefer = _as_path(repo_root, Path(override))
+        else:
+            prefer = global_patterns / pattern_filename_for(key)
+
+        # 3) Fallback global
         fallback = global_patterns / pattern_filename_for(key)
-        # skin_types y medical_terms típicamente globales, pero permitimos override
         pattern_paths[key] = _resolve_file(prefer, fallback)
 
     # --- CSV de catálogo ---
-    # 1) client override en profile
-    # 2) por convención: data/clients/{tenant}/products_catalog.csv
     csv_override = paths.get("data_csv")
-    preferred_csv = Path(csv_override) if csv_override else (data_root / "clients" / tenant_id / "products_catalog.csv")
+    if csv_override:
+        preferred_csv = _as_path(repo_root, Path(csv_override))
+    else:
+        preferred_csv = data_root / "clients" / tenant_id / "products_catalog.csv"
     if not preferred_csv.exists():
         raise FileNotFoundError(
             f"Products catalog not found for tenant '{tenant_id}': {preferred_csv} "

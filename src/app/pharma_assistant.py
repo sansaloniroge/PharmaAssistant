@@ -164,15 +164,19 @@ class VectorIndex:
             self.faiss_index = index # Store FAISS index for later use
 
     def search(self, query_vec: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
-        """Search for top-k similar vectors to the query vector."""
-        q = query_vec.astype("float32") # Ensure float32 for FAISS compatibility
-        q = q / (np.linalg.norm(q, axis=1, keepdims=True) + 1e-12) # Normalize query vector to unit length for cosine similarity
+        """Search for top-k similar vectors to the query vector. Returns (indexes, sims)."""
+        q = query_vec.astype("float32")
+        q = q / (np.linalg.norm(q, axis=1, keepdims=True) + 1e-12)
+
         if self.faiss_index is not None:
-            distances, indexes = self.faiss_index.search(q, k) # Use FAISS for fast search if available
-            return distances[0], indexes[0] # Return indices and distances of top-k results
-        sims = self.mat @ q[0]  # Compute cosine similarities via dot product
-        idx = np.argsort(-sims)[:k] # Get indices of top-k highest similarities
-        return idx, sims[idx] # Return indices and similarity scores
+            # faiss returns (distances, indexes); distances here are cosine sims (we normalized)
+            distances, indexes = self.faiss_index.search(q, k)
+            return indexes[0], distances[0]
+
+        sims = self.mat @ q[0]              # cosine similarities
+        idx = np.argsort(-sims)[:k]
+        return idx, sims[idx]
+
 
 def _load_medical_terms(path: Path) -> re.Pattern:
     """Load medical terms from YAML and compile into regex pattern."""

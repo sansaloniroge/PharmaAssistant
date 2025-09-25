@@ -15,6 +15,7 @@ from app.profile_resolver import resolve_config_namespace
 from service.cors_security import setup_cors, setup_security_headers
 from service.index_loader import load_index, index_status
 from service.logging_setup import setup_logging
+from service.logging_middleware import setup_logging_middleware
 from service.metrics import register_metrics
 from service.quota import can_consume, consume
 
@@ -32,6 +33,7 @@ register_metrics(app)
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 setup_cors(app, allowed_origins=ALLOWED_ORIGINS)
 setup_security_headers(app)
+setup_logging_middleware(app)
 
 # --- Tenants registry ---
 TENANTS_PATH = Path(__file__).with_name("tenants.yaml")
@@ -53,11 +55,6 @@ class ChatIn(BaseModel):
 
 # --- Auth simple: API key por cliente ---
 def auth_guard(request: Request, x_api_key: Optional[str] = Header(None)) -> str:
-    """
-    Valida la API key y obtiene client_id de forma segura:
-    - Primero desde el path (/{client_id})
-    - Si no está, desde la query (?client_id=...)
-    """
     client_id = request.path_params.get("client_id") or request.query_params.get("client_id")
     if not client_id:
         raise HTTPException(status_code=400, detail="client_id is required")
@@ -73,19 +70,24 @@ def auth_guard(request: Request, x_api_key: Optional[str] = Header(None)) -> str
     return str(client_id)
 
 
+
 # --- Quota guard ---
 def quota_guard(response: Response, client_id: str = Depends(auth_guard)) -> str:
     tenant = TENANTS.get(client_id, {})
     limit = int(tenant.get("max_requests_per_day", DEFAULT_DAILY_LIMIT))
     ok, _ = can_consume(client_id, limit)
     if not ok:
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = "0"
-        raise HTTPException(status_code=429, detail="Daily quota exceeded")
+        # Garantiza cabeceras en 429
+        raise HTTPException(
+            status_code=429,
+            detail="Daily quota exceeded",
+            headers={"X-RateLimit-Limit": str(limit), "X-RateLimit-Remaining": "0"},
+        )
     used, remaining_after = consume(client_id, limit)
     response.headers["X-RateLimit-Limit"] = str(limit)
     response.headers["X-RateLimit-Remaining"] = str(remaining_after)
     return client_id
+
 
 # --- Assistant cache por cliente ---
 @lru_cache(maxsize=32)

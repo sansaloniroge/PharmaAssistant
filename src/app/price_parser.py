@@ -38,27 +38,60 @@ class PriceParser:
 
     def parse(self, text: str) -> Optional[Tuple[float, float]]:
         """
-        Returns (lo, hi) price range or None if no price intent found.
-        - 'under 20' -> (0, 20)
-        - '10 to 20' / '10-20' / '10 a 20' -> (10, 20)
-        - '€ 25' / '$ 25' -> (25, 25) (treat as exact budget)
+        Devuelve (lo, hi) a partir de expresiones del tipo:
+          - "under 30", "below 30", "< 30"
+          - "20 to 50", "50-20" (normaliza el orden)
+          - "€30", "€ 30", "30 €", "budget € 30", "budget eur 30"
+        Usa las listas de 'under', 'between' y 'currency' del YAML.
         """
-        m = self._pattern.search(text)
-        if not m:
-            return None
-        g = [x for x in m.groups() if x]
         try:
-            if len(g) == 1:               # under X  OR  single currency amount
-                val = float(g[0])
-                # disambiguate: if the match came from "under/below/menos de" or from currency form
-                if re.search(r"under|below|menos de|<", text, re.I):
-                    return (0.0, val)
-                return (val, val)
-            if len(g) >= 2:               # X to Y
-                lo, hi = float(g[0]), float(g[1])
+            spec = self._load_yaml(self.yaml_path)
+            # Unifica tokens definidos por idioma
+            under_terms: List[str] = []
+            between_terms: List[str] = []
+            currency_terms: List[str] = []
+            for _lang, d in (spec.get("price_patterns") or {}).items():
+                under_terms.extend(d.get("under", []))
+                between_terms.extend(d.get("between", []))
+                currency_terms.extend(d.get("currency", []))
+
+            # Construye regex dinámicos
+            def _alts(xs: List[str]) -> str:
+                return "|".join(re.escape(x) for x in xs if x)
+
+            num = r"(\d+(?:[.,]\d+)?)"
+            under_re = re.compile(rf"(?i)(?:{_alts(under_terms)})\s*(?:{_alts(currency_terms)})?\s*{num}")
+            between_re = re.compile(rf"(?i){num}\s*(?:{_alts(between_terms)})\s*{num}")
+            # moneda antes o después del número (con espacio opcional)
+            currency_re = re.compile(rf"(?i)(?:{_alts(currency_terms)})\s*{num}|{num}\s*(?:{_alts(currency_terms)})")
+
+            def to_float(s: str) -> float:
+                return float(s.replace(",", "."))
+
+            # 1) Rangos "X to Y"
+            m = between_re.search(text)
+            if m:
+                lo, hi = to_float(m.group(1)), to_float(m.group(2))
                 if lo > hi:
                     lo, hi = hi, lo
                 return (lo, hi)
+
+            # 2) "under/below/< N"
+            m = under_re.search(text)
+            if m:
+                hi = to_float(m.group(1))
+                return (0.0, hi)
+
+            # 3) "€ 30" / "30 €" / "eur 30"
+            m = currency_re.search(text)
+            if m:
+                # El número puede estar en group(1) o group(2) según el lado
+                g = m.group(1) if m.group(1) is not None else m.group(2)
+                val = to_float(g)
+                return (val, val)
+
         except Exception:
             return None
+
         return None
+

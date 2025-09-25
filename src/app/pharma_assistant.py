@@ -286,7 +286,7 @@ class PharmaAssistant:
 
         return df
 
-    def _build_or_load_index(self, df: pd.DataFrame):
+    def _build_or_load_index(self, df: pd.DataFrame) -> Tuple[List[Dict[str, Any]], VectorIndex]:
         texts = df["retrieval_text"].tolist()
         sig = catalog_signature(texts, self.settings.EMBEDDING_MODEL, "retriever_v1")
 

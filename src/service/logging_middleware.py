@@ -19,7 +19,10 @@ def _json_dump_line(entry: dict) -> str:
 
 def setup_logging_middleware(app: FastAPI) -> None:
     @app.middleware("http")
-    async def log_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]):
+    async def log_requests(
+            request: Request,
+            call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         start = time.time()
         rid = str(uuid.uuid4())
         path = request.url.path

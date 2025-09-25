@@ -7,8 +7,8 @@ import yaml
 from pydantic import BaseModel
 from pathlib import Path
 from functools import lru_cache
-from typing import Optional, Dict
-from fastapi import FastAPI, Request, HTTPException, Header, Query, Depends, Response
+from typing import Optional, Dict, Callable, Awaitable
+from fastapi import FastAPI, Request, HTTPException, Header, Depends, Response
 
 from app.pharma_assistant import PharmaAssistant, Settings
 from app.profile_resolver import resolve_config_namespace
@@ -22,8 +22,9 @@ log = logging.getLogger("app")
 setup_logging(os.getenv("LOG_LEVEL", "INFO"))
 
 # Métrica de negocio
-RECS_TOTAL = Counter("recommendations_total", "Total recommendations", ["client_id"])
-
+RECS_TOTAL = Counter("recommendations_total", "Total recommendations", ["client_id"], registry=None)
+RECS_CREATED = Counter("recommendations_created", "Created recommendations", ["client_id"], registry=None)
+REQUESTS = Counter("recommendations", "Number of recommendation requests", ["client_id"], registry=None)
 app = FastAPI(title="PharmaAssistant API (SaaS)", version="1.0.0")
 register_metrics(app)
 
@@ -33,12 +34,17 @@ setup_cors(app, allowed_origins=ALLOWED_ORIGINS)
 setup_security_headers(app)
 
 # --- Tenants registry ---
-TENANTS_FILE = Path("service/tenants.yaml")
-if not TENANTS_FILE.exists():
-    raise RuntimeError("service/tenants.yaml not found. Please create it.")
-
-with TENANTS_FILE.open("r", encoding="utf-8") as f:
-    TENANTS: Dict[str, Dict[str, str]] = (yaml.safe_load(f) or {}).get("tenants", {})
+TENANTS_PATH = Path(__file__).with_name("tenants.yaml")
+if TENANTS_PATH.exists():
+    try:
+        _raw = yaml.safe_load(TENANTS_PATH.read_text(encoding="utf-8")) or {}
+        TENANTS: dict[str, dict] = _raw  # ajusta el tipo si lo tienes definido
+    except Exception:
+        log.exception("Failed to load tenants.yaml; using empty config")
+        TENANTS = {}
+else:
+    log.warning("service/tenants.yaml not found; using empty config (tests).")
+    TENANTS = {}
 
 DEFAULT_DAILY_LIMIT = 1000
 
@@ -46,14 +52,26 @@ class ChatIn(BaseModel):
     message: str
 
 # --- Auth simple: API key por cliente ---
-def auth_guard(x_api_key: Optional[str] = Header(None), client_id: str = Query(...)):
-    tenant = TENANTS.get(client_id)
+def auth_guard(request: Request, x_api_key: Optional[str] = Header(None)) -> str:
+    """
+    Valida la API key y obtiene client_id de forma segura:
+    - Primero desde el path (/{client_id})
+    - Si no está, desde la query (?client_id=...)
+    """
+    client_id = request.path_params.get("client_id") or request.query_params.get("client_id")
+    if not client_id:
+        raise HTTPException(status_code=400, detail="client_id is required")
+
+    tenant = TENANTS.get(str(client_id))
     if not tenant:
-        raise HTTPException(401, f"Unknown client_id: {client_id}")
+        raise HTTPException(status_code=401, detail=f"Unknown client_id: {client_id}")
+
     expected = tenant.get("api_key")
     if not x_api_key or x_api_key != expected:
-        raise HTTPException(401, "Invalid API key")
-    return client_id
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+    return str(client_id)
+
 
 # --- Quota guard ---
 def quota_guard(response: Response, client_id: str = Depends(auth_guard)) -> str:
@@ -118,7 +136,7 @@ def healthz():
     return {"ok": True, "tenants": list(TENANTS.keys())}
 
 @app.get("/tenants/{client_id}/healthz")
-def tenant_healthz(client_id: str):
+def tenant_healthz(client_id: str) -> Dict[str, object]:
     try:
         pa = get_assistant_for(client_id)
         _ = pa.greet()
@@ -128,17 +146,17 @@ def tenant_healthz(client_id: str):
         raise HTTPException(500, "Tenant failed to load")
 
 @app.get("/tenants/{client_id}/index/status")
-def tenant_index_status(client_id: str, _: str = Depends(auth_guard)):
+def tenant_index_status(client_id: str, _: str = Depends(auth_guard)) -> Dict[str, object]:
     """Devuelve estado del índice del tenant (tamaño, dimensión, ruta)."""
     return index_status(client_id)
 
 @app.get("/greet")
-def greet(client_id: str = Depends(quota_guard)):
+def greet(client_id: str = Depends(quota_guard)) -> Dict[str, object]:
     pa = get_assistant_for(client_id)
     return {"client_id": client_id, "greeting": pa.greet()}
 
 @app.post("/answer")
-def answer(payload: ChatIn, client_id: str = Depends(quota_guard)):
+def answer(payload: ChatIn, client_id: str = Depends(quota_guard)) -> Dict[str, object]:
     pa = get_assistant_for(client_id)
     try:
         result = pa.answer(payload.message)
@@ -149,7 +167,7 @@ def answer(payload: ChatIn, client_id: str = Depends(quota_guard)):
         raise HTTPException(500, "Internal error while generating the answer")
 
 @app.middleware("http")
-async def access_log(request: Request, call_next):
+async def access_log(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     t0 = time.perf_counter()
     resp = await call_next(request)
     dur_ms = round((time.perf_counter() - t0) * 1000, 2)

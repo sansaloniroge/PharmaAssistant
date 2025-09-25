@@ -38,7 +38,7 @@ def test_deep_merge_dict_overwrites_scalar():
 
 def test_deep_merge_with_none_override():
     base = {"a": 1}
-    out = deep_merge(base, None)  # type: ignore
+    out = deep_merge(base, None)
     assert out == {"a": 1}
 
 

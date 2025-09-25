@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Callable, Awaitable
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -29,7 +29,10 @@ def setup_security_headers(app: FastAPI) -> None:
     CSP en una API puede ser minimalista; aquí la dejamos muy restrictiva.
     """
     @app.middleware("http")
-    async def security_headers(request: Request, call_next):
+    async def security_headers(
+            request: Request,
+            call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         response: Response = await call_next(request)
 
         # Protecciones básicas

@@ -1,7 +1,7 @@
 import sys
 import yaml
 from pathlib import Path
-from typing import List
+from typing import List, Any
 
 ROOT = Path(__file__).resolve().parent.parent
 FILES: List[Path] = [
@@ -12,7 +12,7 @@ FILES: List[Path] = [
     ROOT / "data" / "patterns" / "medical_terms.yaml",
 ]
 
-def load(path: Path):
+def load(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 

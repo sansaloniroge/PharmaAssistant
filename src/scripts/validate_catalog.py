@@ -3,7 +3,7 @@ import sys
 import re
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union
 
 import pandas as pd
 import yaml
@@ -41,7 +41,7 @@ def map_columns(df: pd.DataFrame) -> Dict[str, str]:
                 break
     return mapping
 
-def parse_price_to_float(x) -> Optional[float]:
+def parse_price_to_float(x: Union[str, float, int, None]) -> Optional[float]:
     if pd.isna(x):
         return None
     s = str(x)

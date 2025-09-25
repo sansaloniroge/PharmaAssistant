@@ -6,7 +6,7 @@ import os
 import sys
 import hashlib
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 import numpy as np
 import pandas as pd
@@ -37,6 +37,7 @@ def _embed_openai(texts: List[str], model: str, batch_size: int = 100) -> np.nda
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
         resp = client.embeddings.create(model=model, input=batch)
+        # Cada embedding es Sequence[float] → convertir explícitamente a list[float]
         out.extend([list(d.embedding) for d in resp.data])
     return np.array(out, dtype="float32")
 
@@ -79,7 +80,7 @@ def make_corpus(df: pd.DataFrame, text_cols: List[str]) -> List[str]:
     return (df[text_cols].fillna("").astype(str).agg(" - ".join, axis=1)).tolist()
 
 
-def save_index(out_dir: Path, embeddings: np.ndarray, meta_rows: List[Dict]):
+def save_index(out_dir: Path, embeddings: np.ndarray, meta_rows: List[Dict[str, Any]]) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     np.save(out_dir / "embeddings.npy", embeddings)
     (out_dir / "meta.json").write_text(json.dumps(meta_rows, ensure_ascii=False), encoding="utf-8")
@@ -97,7 +98,13 @@ def save_index(out_dir: Path, embeddings: np.ndarray, meta_rows: List[Dict]):
     )
 
 
-def build_index(catalog: Path, out_dir: Path, model: str = "text-embedding-3-small", backend: str = "auto", text_cols: Optional[List[str]] = None):
+def build_index(
+    catalog: Path,
+    out_dir: Path,
+    model: str = "text-embedding-3-small",
+    backend: str = "auto",
+    text_cols: Optional[List[str]] = None,
+) -> None:
     df = pd.read_csv(catalog)
     if df.empty:
         print(f"ERROR: catálogo vacío: {catalog}", file=sys.stderr)

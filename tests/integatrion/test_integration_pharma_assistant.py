@@ -9,12 +9,13 @@ from app.pharma_assistant import PharmaAssistant, VectorIndex
 # Stubs for external modules
 class _DummyOpenAI:
     def __init__(self, *args, **kwargs): pass
+
 openai_mod = types.ModuleType("openai")
-openai_mod.OpenAI = _DummyOpenAI
+setattr(openai_mod, "OpenAI", _DummyOpenAI)
 sys.modules.setdefault("openai", openai_mod)
 
 unidecode_mod = types.ModuleType("unidecode")
-unidecode_mod.unidecode = lambda s: s
+setattr(unidecode_mod, "unidecode", lambda s: s)
 sys.modules.setdefault("unidecode", unidecode_mod)
 
 class StubEmbedder:

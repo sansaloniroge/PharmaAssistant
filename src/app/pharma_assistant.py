@@ -15,7 +15,7 @@ import os  # For environment variables
 import re  # For regex parsing of messages
 from dataclasses import dataclass  # For configuration class
 from pathlib import Path  # For file path handling
-from typing import List, Dict, Any, Optional, Tuple # For type hints
+from typing import List, Dict, Any, Optional, Tuple, cast # For type hints
 from datetime import datetime # For greeting based on time of day
 
 import numpy as np  # For numeric arrays and vector operations
@@ -66,10 +66,11 @@ class Settings:
     TEMPERATURE: float = 0.6  # Sampling temperature for chat model responses
 
     @staticmethod
-    def from_config() -> "Settings":
-        """Load settings from environment variables."""
-        cfg = user_config.CONFIG
-        # Fail if paths are missing
+    def from_config(cfg: Optional[Any] = None) -> "Settings":
+        """Load settings from provided cfg or default user_config.CONFIG"""
+        # ⬇⬇⬇ antes: cfg = user_config.CONFIG
+        cfg = cfg or user_config.CONFIG
+
         required = [
             ("DATA_PATH", getattr(cfg, "DATA_PATH", None)),
             ("INDEX_DIR", getattr(cfg, "INDEX_DIR", None)),
@@ -88,7 +89,7 @@ class Settings:
         for name, val in required:
             if val is None:
                 raise AttributeError(f"CONFIG.{name} is required but not set in config.py")
-        # Build settings (models/params can have sensible defaults if not provided)
+
         return Settings(
             DATA_PATH=Path(cfg.DATA_PATH),
             INDEX_DIR=Path(cfg.INDEX_DIR),
@@ -193,7 +194,7 @@ class PharmaAssistant:
         api_key = os.getenv("OPENAI_API_KEY") # Read API key from environment
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY is required in environment") # Fail if API key is missing
-        self.client = OpenAI(api_key=api_key) # Initialize OpenAI client
+        self.client = cast(Any, OpenAI(api_key=api_key)) # Initialize OpenAI client
         self.embedder = Embedder(self.client, settings.EMBEDDING_MODEL) # Initialize embedder
 
         # Load prompts
@@ -420,10 +421,11 @@ class PharmaAssistant:
             STORE_NAME=self.settings.STORE_NAME,
             TIME_OF_DAY=self._time_of_day(),
         )
-        messages = [
+        messages: List[ChatCompletionMessageParam] = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": seed},
         ]
+        text = self._chat(messages)
 
         # Use the shared retrying chat helper
         text = self._chat(messages)
@@ -466,10 +468,11 @@ class PharmaAssistant:
         few = self._fewshot_as_text()
         if few:
             compose = few + compose
-        messages = [
+        messages: List[ChatCompletionMessageParam] = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": compose},
         ]
+        text = self._chat(messages)
 
         # Use the shared retrying chat helper
         text = self._chat(messages)

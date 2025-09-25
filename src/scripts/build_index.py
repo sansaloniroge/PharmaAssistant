@@ -37,8 +37,9 @@ def _embed_openai(texts: List[str], model: str, batch_size: int = 100) -> np.nda
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
         resp = client.embeddings.create(model=model, input=batch)
-        out.extend([d.embedding for d in resp.data])
+        out.extend([list(d.embedding) for d in resp.data])
     return np.array(out, dtype="float32")
+
 
 
 def embed_texts(texts: List[str], backend: str = "auto", model: str = "text-embedding-3-small") -> np.ndarray:

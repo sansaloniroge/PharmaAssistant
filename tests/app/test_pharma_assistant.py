@@ -8,21 +8,24 @@ from app.pharma_assistant import _norm, Settings, VectorIndex, PharmaAssistant
 # Provide a minimal stub for the 'openai' package required at import time
 class _DummyClient:
     def __init__(self, *args, **kwargs): pass
+
 class _DummyOpenAI:
     def __init__(self, *args, **kwargs): pass
+
 OpenAI = _DummyOpenAI
 
 stub_mod = types.ModuleType("openai")
-stub_mod.OpenAI = OpenAI
+setattr(stub_mod, "OpenAI", OpenAI)
 sys.modules.setdefault("openai", stub_mod)
 
-# Stub for 'unidecode' dependency
+# Stub de 'unidecode'
 ud_mod = types.ModuleType("unidecode")
 def _ascii_unidecode(s):
     if s is None:
         return ""
     return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
-ud_mod.unidecode = _ascii_unidecode
+
+setattr(ud_mod, "unidecode", _ascii_unidecode)
 sys.modules.setdefault("unidecode", ud_mod)
 
 def test_norm_handles_none_nan_and_accents():

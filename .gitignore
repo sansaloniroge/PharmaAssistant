@@ -16,6 +16,9 @@ __pycache__/
 # Ignore OS files
 .DS_Store
 
-# Poetry lock file should NOT be ignored (keep it versioned)
-# poetry.lock
-# END
+stubs/
+deploy/helm/**
+.github/
+.git
+*.pyc
+__MACOSX/

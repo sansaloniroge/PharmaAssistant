@@ -11,7 +11,7 @@ Documento de referencia para entender **cómo está organizado** el sistema, sus
 - **Ingesta offline:** `scripts/` para construir índices (`embeddings.npy` + `meta.json`) desde los catálogos CSV de cada cliente.
 - **Multi-tenant:** configuración, prompts y catálogos por cliente en `data/clients/<id>/`; perfiles en `profiles/clients/<id>.yaml`; índices en `storage/<id>/`.
 - **Observabilidad:** logs JSON (middleware) y métricas Prometheus en `/metrics`.
-- **Despliegue:** local con Docker Compose, y (opcional) Helm/Kubernetes en `deploy/helm/`.
+- **Despliegue:** local con Docker Compose — es lo único verificado. (Hubo un chart de Helm para K8s en `deploy/helm/`; se eliminó porque nunca llegó a desplegarse contra un cluster real ni a publicarse una imagen — ver `docs/ci-cd.md`.)
 
 ---
 
@@ -58,7 +58,6 @@ scripts/                 # Ingesta offline: build/rebuild índices, validadores
 data/                    # Patrones globales y datos por cliente (catálogos, prompts)
 profiles/                # Perfiles por cliente (YAML)
 storage/                 # Artefactos de índice por cliente (generado)
-deploy/helm/             # (Opcional) Helm chart para Kubernetes
 docs/, ops/              # Documentación y runbooks
 ```
 
@@ -162,7 +161,6 @@ Cuotas: **límite diario** con cabeceras `X-RateLimit-Limit` y `X-RateLimit-Rema
 ## Errores y resiliencia
 
 - Respuestas 5xx **genéricas** (detalle en logs).
-- `PodDisruptionBudget`/HPA/NetworkPolicy disponibles si despliegas en Kubernetes (ver Helm).
 - `PRELOAD_TENANTS` para calentar perfiles/índices críticos y mejorar errores de primer acceso.
 
 ---
@@ -172,7 +170,6 @@ Cuotas: **límite diario** con cabeceras `X-RateLimit-Limit` y `X-RateLimit-Rema
 - **Separación de ingesta** (offline) → el serving es ligero.
 - **Cache por tenant** (`lru_cache`) para asistentes y carga de perfiles.
 - **Embeddings**: tamaño `N` y dimensión `D` impactan memoria/tiempo de carga (ver `index_info.json`).
-- **Autoescalado** (si K8s): HPA por CPU/latencia y PDB para alta disponibilidad.
 - **Cold start**: mitigable con preload y warmup.
 
 ---
@@ -180,7 +177,7 @@ Cuotas: **límite diario** con cabeceras `X-RateLimit-Limit` y `X-RateLimit-Rema
 ## Desarrollo local vs Producción
 
 - **Local**: Docker Compose (`pharmaassistant`), volúmenes para `data/`, `profiles/`, `storage/`, `service/tenants.yaml`.
-- **Prod**: Contenedor no-root, logs a stdout, métricas en `/metrics`, secretos por gestor (AWS/GCP/Azure) o variables de entorno. Opcional Kubernetes/Helm.
+- **Prod**: no verificado todavía — el contenedor está preparado (no-root, logs a stdout, métricas en `/metrics`), pero no hay un entorno de producción real donde se haya desplegado.
 
 ---
 

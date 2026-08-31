@@ -148,7 +148,7 @@ services:
 - Logs a **stdout** (JSON) y métricas en `/metrics`.
 - Controla `UVICORN_WORKERS` según CPU (p. ej., `workers = 2 * CPU + 1`).
 
-> Si usas Kubernetes/Helm, puedes mapear estas variables a **ConfigMaps** y **Secrets** (ver la guía de Helm), pero **no es obligatorio** para producción si usas otra plataforma.
+> No hay todavía un despliegue de producción real verificado — solo `docker compose up` local. Cuando exista un entorno real, esta sección debería documentarlo con lo que de verdad se use, no con una plataforma hipotética.
 
 ---
 

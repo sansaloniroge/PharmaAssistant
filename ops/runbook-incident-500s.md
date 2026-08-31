@@ -143,13 +143,11 @@ poetry run uvicorn service.main:app --port 8080 --reload
 - **Rollback** a imagen estable si el incidente coincide con un release reciente.  
 - **Desactivar** temporalmente features experimentales (si existen flags).
 
-### Rollback rápido de imagen (local ejemplo)
+### Rollback rápido (local, sin registry)
+Sin pipeline de publicación de imagen (ver `docs/ci-cd.md`), el rollback hoy es a nivel de código: vuelve al commit/tag estable anterior y reconstruye.
 ```bash
-docker pull <ECR>/pharmaassistant:0.1.5
-docker compose down && docker run --rm -p 8080:8080 \
-  -v $PWD/data:/app/data:ro -v $PWD/profiles:/app/profiles:ro \
-  -v $PWD/storage:/app/storage -v $PWD/service/tenants.yaml:/app/service/tenants.yaml:ro \
-  <ECR>/pharmaassistant:0.1.5
+git checkout v0.1.5   # o el commit/tag estable conocido
+docker compose down && docker compose up --build -d
 ```
 
 ---
@@ -215,5 +213,3 @@ done
 ```
 
 ---
-
-**Nota**: si despliegas en Kubernetes, añade referencia a los comandos `kubectl logs`, `rollout undo`, `describe pods`, y a los objetos HPA/PDB/NetworkPolicy de tu chart.

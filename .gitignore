@@ -17,7 +17,6 @@ __pycache__/
 .DS_Store
 
 stubs/
-deploy/helm/**
 .github/
 .git
 *.pyc

@@ -1,0 +1,17 @@
+version: 1
+defaults:
+  top_k: 5
+  temperature: 0.6
+  models:
+    embedding: text-embedding-3-large
+    chat: gpt-4o-mini
+  paths:
+    system_prompt: data/prompts/system_prompt.txt
+    compose_prompt: data/prompts/compose_prompt.txt
+    greeting_prompt: data/prompts/greeting_prompt.txt
+    no_match_prompt: data/prompts/no_match_prompt.txt
+    schema_map: data/schema_map.yaml
+    price_patterns: data/price_patterns.yaml
+    category_patterns: data/category_patterns.yaml
+    skin_types: data/skin_types.yaml
+    medical_terms: data/medical_terms.yaml

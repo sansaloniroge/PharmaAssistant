@@ -1,0 +1,24 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "pharmaassistant.fullname" . }}
+  labels:
+    {{- include "pharmaassistant.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "pharmaassistant.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - {}   # abierto dentro del namespace; ajusta a tus necesidades
+  egress:
+  {{- if .Values.networkPolicy.allowGlobalHttpsEgress }}
+    - to:
+        - ipBlock: { cidr: 0.0.0.0/0 }
+      ports:
+        - protocol: TCP
+          port: 443
+  {{- end }}
+{{- end }}

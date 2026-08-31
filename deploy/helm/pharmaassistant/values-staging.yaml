@@ -1,0 +1,14 @@
+replicaCount: 2
+
+image:
+  tag: "0.1.0-rc"
+
+env:
+  APP_ENV: "staging"
+  LOG_LEVEL: "info"
+
+# Solo si tienes templates/ingress.yaml
+ingress:
+  enabled: true
+  hosts:
+    - "pharmaassistant.stg.tu-dominio.com"

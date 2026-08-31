@@ -1,3 +1,24 @@
 .env
 .idea/
+# Ignore Python version file (pyenv)
+.python-version
+
+# Ignore FAISS index files
+storage/indexes/*
+
+# Bytecode cache
+__pycache__/
+
+# Ignore virtual environments (if created inside project)
+.venv/
+.venv1/
+
+# Ignore OS files
 .DS_Store
+
+stubs/
+deploy/helm/**
+.github/
+.git
+*.pyc
+__MACOSX/

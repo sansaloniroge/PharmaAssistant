@@ -1,0 +1,10 @@
+.git
+__pycache__/
+.DS_Store
+.idea/
+.vscode/
+__MACOSX/
+storage/indexes/*     # índices grandes: mejor PVC/Blob/CronJob
+deploy/helm/**
+.github/
+tests/

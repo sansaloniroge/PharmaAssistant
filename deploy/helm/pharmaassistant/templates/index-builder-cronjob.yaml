@@ -1,0 +1,30 @@
+{{- if .Values.indexBuilder.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "pharmaassistant.fullname" . }}-index-builder
+  labels:
+    {{- include "pharmaassistant.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.indexBuilder.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "pharmaassistant.labels" . | nindent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: index-builder
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              args:
+{{- toYaml .Values.indexBuilder.args | nindent 16 }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "pharmaassistant.fullname" . }}-config
+              {{- if .Values.secrets.enabled }}
+                - secretRef:
+                    name: {{ include "pharmaassistant.fullname" . }}-secrets
+              {{- end }}
+{{- end }}

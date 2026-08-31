@@ -4,7 +4,6 @@ __pycache__/
 .idea/
 .vscode/
 __MACOSX/
-storage/indexes/*     # índices grandes: mejor PVC/Blob/CronJob
-deploy/helm/**
+storage/indexes/*     # índices grandes: mejor recalcularlos o subirlos a un storage externo
 .github/
 tests/

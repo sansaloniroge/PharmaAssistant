@@ -1,6 +1,6 @@
 # Runbook — Rotación de claves y secretos
 
-Procedimiento operativo para **rotar claves** de PharmaAssistant de forma segura y con mínima interrupción. Cubre rotación de **API keys por tenant**, **OPENAI_API_KEY**, y secretos de CI/CD. Incluye verificación, rollback y automatización.
+Procedimiento operativo para **rotar claves** de PharmaAssistant de forma segura y con mínima interrupción. Cubre rotación de **API keys por tenant** y **OPENAI_API_KEY**. Incluye verificación, rollback y automatización.
 
 ---
 
@@ -9,9 +9,8 @@ Procedimiento operativo para **rotar claves** de PharmaAssistant de forma segura
 **Claves/secretos cubiertos:**
 - `service/tenants.yaml` → `api_key` por `client_id` (autenticación de la API).
 - `OPENAI_API_KEY` (uso opcional en indexado/LLM).
-- Secretos de **CI/CD** (e.g., `AWS_ROLE_ARN` o tokens de registries, si aplica).
 
-> Nota: este runbook es **agnóstico de plataforma**. Donde aplica, se dan comandos para **local/Docker Compose** y notas para **Kubernetes/Helm** (opcional).
+> No hay pipeline de CI/CD con secretos de publicación (AWS/ECR) — se eliminó porque nunca llegó a funcionar (ver `docs/ci-cd.md`). Este runbook cubre solo lo que existe de verdad: local/Docker Compose.
 
 ---
 
@@ -62,7 +61,6 @@ tenants:
   ```bash
   docker compose restart pharmaassistant
   ```
-- **Kubernetes (opcional)**: si está en ConfigMap/Secret, aplica y fuerza rollout del deployment.
 
 ### 3.4 Verificación
 ```bash
@@ -96,8 +94,6 @@ export OPENAI_API_KEY="sk-***NUEVA***"
 docker compose up -d --build
 ```
 
-**Kubernetes (opcional)**: actualiza el Secret y realiza un **rollout**.
-
 ### 4.3 Verificación
 - Reindexa un tenant de prueba (si el backend por defecto usa OpenAI):
   ```bash
@@ -119,25 +115,7 @@ Si el proveedor está caído o la nueva clave falla:
 
 ---
 
-## 5) Rotar secretos de CI/CD (GitHub Actions → AWS ECR con OIDC)
-
-### 5.1 Caso común: `AWS_ROLE_ARN`
-- No es una “clave” sino un **rol** IAM. Rotación implica **restringir/ajustar** la **trust policy** (sub, repo/branch), o **cambiar** el ARN.
-- Actualiza el secret `AWS_ROLE_ARN` del repo si cambias el rol.
-
-### 5.2 Otros secrets (tokens, passwords)
-- Cambia el valor en **Settings → Secrets and variables → Actions**.
-- Reejecuta el workflow de publicación y verifica tags en ECR.
-
-### 5.3 Verificación
-```bash
-# En ECR: debe aparecer imagen :sha7 / :latest / :<version>
-aws ecr describe-images --repository-name pharmaassistant --region eu-west-1
-```
-
----
-
-## 6) Rollback
+## 5) Rollback
 
 - Conserva las **claves antiguas** durante un período corto y en un almacén seguro.
 - Si la nueva clave causa fallo, **reaplica** la anterior temporalmente:
@@ -151,9 +129,9 @@ aws ecr describe-images --repository-name pharmaassistant --region eu-west-1
 
 ---
 
-## 7) Automatización (opcional)
+## 6) Automatización (opcional)
 
-### 7.1 Script de rotación de key por tenant
+### 6.1 Script de rotación de key por tenant
 ```bash
 #!/usr/bin/env bash
 TENANTS=service/tenants.yaml
@@ -172,12 +150,12 @@ print("actualizado", f)
 PY
 ```
 
-### 7.2 Doble clave temporal (grace period)
+### 6.2 Doble clave temporal (grace period)
 Puedes extender `auth_guard` para aceptar **lista de claves** por tenant y planificar un **apagado programado** de la clave antigua.
 
 ---
 
-## 8) Seguridad y buenas prácticas
+## 7) Seguridad y buenas prácticas
 
 - **Nunca** versionar claves reales; usa env/secret manager.
 - Limitar la exposición de `service/tenants.yaml` (montar **read-only**).
@@ -187,7 +165,7 @@ Puedes extender `auth_guard` para aceptar **lista de claves** por tenant y plani
 
 ---
 
-## 9) Verificación de cierre
+## 8) Verificación de cierre
 
 - [ ] Key nueva funcional (200 OK en `/greet` / `/answer`).  
 - [ ] Key antigua bloqueada (401).  
@@ -197,9 +175,9 @@ Puedes extender `auth_guard` para aceptar **lista de claves** por tenant y plani
 
 ---
 
-## 10) Plantillas útiles
+## 9) Plantillas útiles
 
-### 10.1 Mensaje a cliente (ejemplo)
+### 9.1 Mensaje a cliente (ejemplo)
 ```
 Asunto: Rotación de API key — <cliente>
 

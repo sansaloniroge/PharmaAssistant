@@ -19,10 +19,10 @@ test-unit:
 	pytest -q tests/app
 
 test-service:
-	pytest -q tests/integration/test_service_fastapi.py
+	pytest -q tests/integatrion/test_service_fastapi.py
 
 test-docker:
-	pytest -q -m docker tests/integration/test_container_api.py
+	pytest -q -m docker tests/integatrion/test_container_api.py
 
 fmt:
 	poetry run ruff format .

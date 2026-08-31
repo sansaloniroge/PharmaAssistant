@@ -82,9 +82,8 @@ curl -s "$API/greet?client_id=$CID" -H "x-api-key: $KEY"
 
 - **Poetry** con `poetry.lock` versionado.  
 - Actualizaciones periódicas de dependencias (semana/mes).  
-- Escaneo de **imagen Docker** (Trivy) en CI (no bloqueante al principio).  
 - **Dockerfile** multi-stage, imagen **slim**, usuario no-root, `.dockerignore` para excluir datos/secretos.  
-- CI con **OIDC** a AWS (sin credenciales estáticas), rol con **least privilege** (solo ECR push/pull).
+- Sin pipeline de publicación de imagen todavía (ver `docs/ci-cd.md`) — cuando exista, debería usar OIDC en vez de credenciales estáticas y un escaneo de vulnerabilidades (p. ej. Trivy) antes de publicar.
 
 ---
 
@@ -149,7 +148,6 @@ curl -i "http://localhost:8080/greet?client_id=client_1" -H "x-api-key: WRONG"
 ## 10) Configuración de seguridad en despliegues
 
 - **Docker Compose**: montar `tenants.yaml` en **read-only**; ajustar permisos de `storage/`.  
-- **Kubernetes (opcional)**: usar `Secrets`, `ConfigMaps`, `NetworkPolicy`, `PodSecurityContext` no-root, `PDB`, `HPA`, TLS en Ingress. *(Ver guía Helm separada)*.  
 - **LB/Firewall**: limitar acceso público a `/metrics` y endpoints internos.
 
 ---

@@ -22,3 +22,7 @@ deploy/helm/**
 .git
 *.pyc
 __MACOSX/
+
+#Claude Code support files
+CLAUDE.md
+PORTFOLIO_GOALS.md

@@ -1,7 +1,11 @@
 import os
+import shutil
 import sys
+import tempfile
 import types
 from pathlib import Path
+
+import pytest
 
 # Ensure the src/ layout is importable in tests
 THIS_DIR = os.path.dirname(__file__)
@@ -37,3 +41,21 @@ if "config" not in sys.modules:
     )
     setattr(config_mod, "CONFIG", CONFIG)
     sys.modules["config"] = config_mod
+
+
+@pytest.fixture(autouse=True)
+def _isolated_quota_storage(monkeypatch):
+    """
+    Give every test its own quota storage dir. Without this, any test that
+    hits /greet or /answer without overriding QUOTA_BASE_DIR writes real
+    usage counters to the module's relative default path, which persists
+    across separate local `pytest` runs and eventually exceeds the low
+    per-test limits some tests hardcode (flaky 429s unrelated to the test
+    itself).
+    """
+    import service.quota as quota
+
+    tmp_dir = Path(tempfile.mkdtemp(prefix="pa_quota_"))
+    monkeypatch.setattr(quota, "QUOTA_BASE_DIR", tmp_dir)
+    yield
+    shutil.rmtree(tmp_dir, ignore_errors=True)

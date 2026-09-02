@@ -1,5 +1,7 @@
 # Runbook — Restaurar `storage/` (índices por tenant)
 
+> **Nota de ruta:** el índice real que usa la API en serving vive en `storage/<id>/index/` (sin `index_info.json`, `meta.json` con `signature`) — ver `docs/configuration.md#25-storage-de-índices-storageidindex`. Este runbook usa la ruta antigua `storage/<id>/` (sin `index/`), que es la que escribe la herramienta offline `scripts/build_index.py`, hoy desconectada de lo que lee la API. Ajusta las rutas según cuál de los dos estés restaurando.
+
 Procedimiento para **restaurar o reconstruir** el almacenamiento de índices (`storage/<tenant>/`) cuando se pierde, corrompe o se migra de host. Incluye verificación y medidas preventivas.
 
 ---

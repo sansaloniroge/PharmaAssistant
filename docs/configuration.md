@@ -92,18 +92,20 @@ tone: "profesional"
 # top_k: 5
 ```
 
-### 2.5 Storage de índices (`storage/<id>/`)
+### 2.5 Storage de índices (`storage/<id>/index/`)
 
-Directorio **generado** por los scripts de ingesta (Paso 7):
+Directorio **generado automáticamente** en el primer request de un tenant por `app/pharma_assistant.py`/`app/index_cache.py` (no por `scripts/build_index.py` — ver nota abajo):
 
 ```
-storage/<id>/
-├── embeddings.npy      # float32 [N, D]
-├── meta.json           # N dicts (copias de filas del CSV)
-└── index_info.json     # {count, dim, bytes, version}
+storage/<id>/index/
+├── embeddings.npy      # float32 [N, D], normalizado
+├── meta.json           # {signature, embedding_model, dim, count, has_faiss}
+└── faiss.index         # si FAISS está disponible
 ```
 
-> La API los lee con `service/index_loader.py`. El path base se controla con `STORAGE_BASE` (por defecto `storage/`).
+> `service/index_loader.py` lee este mismo directorio (solo lectura, para `/readyz` y `/tenants/{id}/index/status`) — no construye nada. El path base se controla con `STORAGE_BASE` (por defecto `storage/`).
+>
+> `scripts/build_index.py` (con backend `hash` determinista sin OpenAI) escribe en `storage/<id>/` directamente, sin subcarpeta `index/` y sin `signature` en `meta.json` — un formato distinto, no conectado hoy a lo que lee `PharmaAssistant` ni `index_loader.py`. Ver "Known limitations" en el README raíz.
 
 ---
 

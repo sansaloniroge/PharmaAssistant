@@ -65,24 +65,28 @@ docs/, ops/              # Documentación y runbooks
 
 ## Flujos de datos
 
-### 1) Ingesta / Construcción de índices (offline)
+### 1) Índice real (online, usado por `/greet`/`/answer`)
 1. `data/clients/<id>/products_catalog.csv` — CSV por cliente.
-2. `python scripts/build_index.py --client-id <id>`
-3. El script crea:
-   - `storage/<id>/embeddings.npy` (`float32` `[N,D]`)
-   - `storage/<id>/meta.json` (lista de `N` filas con las columnas del CSV)
-   - `storage/<id>/index_info.json` (conteo, dim, bytes, versión)
-4. (Opcional) `python -m scripts.rebuild_all` para todos los clientes.
+2. En el primer request de un tenant, `PharmaAssistant._build_or_load_index()` (`app/pharma_assistant.py` + `app/index_cache.py`) calcula una firma del catálogo (`catalog_signature`), embebe con OpenAI si no hay caché con esa firma, y guarda:
+   - `storage/<id>/index/embeddings.npy` (`float32` `[N,D]`, normalizado)
+   - `storage/<id>/index/meta.json` (`{signature, embedding_model, dim, count, has_faiss}`)
+   - `storage/<id>/index/faiss.index` (si FAISS está disponible)
+3. En requests posteriores, si la firma coincide, se carga la caché en vez de volver a llamar a OpenAI.
 
-**Contrato:** el número de filas de `meta.json` debe coincidir con `embeddings.npy.shape[0]`.
+**Contrato:** `meta.json.count`/`.dim` deben coincidir con `embeddings.npy.shape`.
 
-### 2) Serving / Respuesta online
+### 2) Herramienta offline de ingesta (`scripts/build_index.py`)
+`python -m scripts.build_index --client-id <id> [--backend hash|openai|auto]` (soporta un backend hash determinista sin OpenAI) escribe `storage/<id>/{embeddings.npy, meta.json, index_info.json}` — **una ubicación y formato distintos** a los del punto 1 (sin subcarpeta `index/`, `meta.json` sin `signature`). Es una herramienta independiente, no conectada hoy al caché que usa `PharmaAssistant` en serving — ver "Known limitations" en el README raíz.
+
+### 3) Serving / Respuesta online
 1. Cliente llama a `/answer?client_id=<id>` con header `x-api-key`.
 2. `service/main.py` aplica **auth** (`auth_guard`) y **cuotas** (`quota_guard`).
-3. Carga el asistente del cliente (`get_assistant_for` → `app/`).
-4. Si hace falta, carga índice en caliente (`service/index_loader.py`).
-5. Ejecuta la lógica del asistente y devuelve la respuesta.
-6. Observabilidad: incrementa métricas (`http_*`, `recommendations_total`) y emite logs JSON.
+3. Carga el asistente del cliente (`get_assistant_for` → `app/`), que construye o reutiliza el índice real (punto 1).
+4. Ejecuta la lógica del asistente y devuelve la respuesta.
+5. Observabilidad: incrementa métricas (`http_*`, `recommendations_total`) y emite logs JSON.
+
+### 4) Readiness / status (`service/index_loader.py`)
+`/readyz` (precarga vía `PRELOAD_TENANTS`) y `/tenants/{id}/index/status` leen el **mismo índice real del punto 1** (`storage/<id>/index/`) para reportar si un tenant está listo — no construyen ni escriben nada, solo verifican que el caché ya exista.
 
 ---
 
@@ -94,7 +98,7 @@ docs/, ops/              # Documentación y runbooks
   - `data/clients/<id>/prompts/*.txt` (prompts específicos).
   - `data/clients/<id>/patterns/*.yaml` (overrides opcionales).
 - **Catálogo por tenant:** `data/clients/<id>/products_catalog.csv`.
-- **Almacenamiento:** `storage/<id>/{embeddings.npy, meta.json, index_info.json}`.
+- **Almacenamiento (índice real, usado en serving):** `storage/<id>/index/{embeddings.npy, meta.json, faiss.index}`.
 - **Tenants y cuotas:** `service/tenants.yaml` (API key y `max_requests_per_day`).
 
 > El endpoint `/readyz` puede precalentar (`PRELOAD_TENANTS`) para mejorar el primer acceso.

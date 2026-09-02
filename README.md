@@ -19,7 +19,7 @@ What's real today: `FastAPI` API (`service/main.py`) → per-tenant API-key auth
 - **Generation**: OpenAI chat (`gpt-4o-mini` by default), prompted to only recommend from the product cards it was given
 - **Multi-tenant**: per-tenant catalog/prompts/config (`data/clients/<id>/`, `profiles/clients/<id>.yaml`), per-tenant API key + daily quota (`service/tenants.yaml`)
 - **Observability**: JSON access logs, Prometheus metrics (`/metrics`)
-- **Tests**: pytest, 86+ tests (unit + integration), all mocking OpenAI — see [Evaluation](#evaluation) for the real-API numbers
+- **Tests**: pytest, 91+ tests (unit + integration), all mocking OpenAI — see [Evaluation](#evaluation) for the real-API numbers
 
 ## How to run it
 
@@ -36,9 +36,11 @@ curl -s "http://localhost:8080/greet?client_id=farmacia_carmen_sanjuan" \
 curl -s -X POST "http://localhost:8080/answer?client_id=farmacia_carmen_sanjuan" \
   -H "x-api-key: demo_key_farmacia_carmen_sanjuan" -H "content-type: application/json" \
   -d '{"message":"I have oily skin and want to reduce pores, budget under 30 euros"}' | jq .
+
+curl -s http://localhost:8080/readyz | jq .   # 200 once the real index cache is built (first request above)
 ```
 
-Verified end-to-end from a fresh `docker compose up --build`, real OpenAI calls, `farmacia_carmen_sanjuan` (the one tenant with a real catalog) — both calls above come back `200` with a real, grounded recommendation. `client_1`/`client_2` are also in `service/tenants.yaml`, as the worked-example IDs `docs/getting-started.md`/`docs/adding-a-client.md` walk through building from scratch; neither has a catalog on disk yet.
+Verified end-to-end from a fresh `docker compose up --build`, real OpenAI calls, `farmacia_carmen_sanjuan` (the one tenant with a real catalog) — all calls above come back `200`, `/greet`/`/answer` with a real, grounded recommendation. `client_1`/`client_2` are also in `service/tenants.yaml`, as the worked-example IDs `docs/getting-started.md`/`docs/adding-a-client.md` walk through building from scratch; neither has a catalog on disk yet.
 
 Run tests: `make test` (or `pytest -q`). Run the real eval (costs a few cents in OpenAI credits): `poetry run eval-runner`.
 
@@ -94,7 +96,7 @@ Re-run it yourself: `poetry run eval-runner` (writes a full JSON report to `.eva
 
 ## Known limitations
 
-- **Three incompatible index-storage conventions, so `/readyz` reports `503` even though the product works.** `app/index_cache.py` (`storage/<tenant>/index/`, `meta.json` with a `signature` key) is what the live `PharmaAssistant` class actually uses to serve `/greet`/`/answer` — and it works, verified above. `src/scripts/build_index.py` (with a real deterministic hash-based embedding fallback, `--backend hash`, no OpenAI key needed) writes a *different* shape at `storage/<tenant>/` directly, no `signature` key. `service/index_loader.py` (used by `/readyz` preload and `/tenants/{id}/index/status`) expects that second shape. None of the three were ever wired together — a pre-built index from `build_index.py` is invisible to the live class, and the live class's own cache is invisible to `/readyz`. Not fixed here.
+- **`build_index.py`'s offline cache (with its free, deterministic hash-backend fallback) still isn't usable by the live class.** `service/index_loader.py` (used by `/readyz`/`/tenants/{id}/index/status`) now reads the *same* real cache `app/index_cache.py` builds for the live `PharmaAssistant` class (`storage/<tenant>/index/`, `meta.json` with a `signature` key) — `/readyz` correctly reports `200` once a tenant's real index exists. `src/scripts/build_index.py` (`--backend hash`, no OpenAI key needed) still writes a *different* shape at `storage/<tenant>/` directly (no `signature`), so a pre-built offline index is still invisible to the live class, which always calls real OpenAI on a tenant's first request. Reconciling that (making `build_index.py` build the exact retrieval-text corpus `PharmaAssistant._load_catalog()` uses, so the signatures actually match) is a larger, separate change — not done here.
 - **No relevance threshold in retrieval.** `retrieve()` always returns the top-k candidates by similarity, even for genuinely out-of-catalog questions — see [Evaluation](#evaluation). Fixing this is a retrieval-logic change (a minimum similarity score, or a separate in-domain classifier), intentionally not done yet.
 - **No cross-tenant catalog test against the live class** — the [cross-tenant isolation tests](tests/integatrion/test_cross_tenant_isolation.py) verify auth, quota, and config-path resolution don't leak between tenants, all without needing OpenAI; there's no equivalent test using two real, fully-built `PharmaAssistant` instances (that would need two real catalogs' worth of embedding calls per test run).
 - **9-case eval is a smoke test, not a benchmark.** Useful to catch regressions and characterize real behavior (as it did above), not to claim a statistically robust quality number.
@@ -102,7 +104,7 @@ Re-run it yourself: `poetry run eval-runner` (writes a full JSON report to `.eva
 
 ## What's next
 
-- Reconcile the three index-storage conventions above so `/readyz` reflects reality and a pre-built `build_index.py` cache actually gets used by the live class (real latency/cost win for cold starts).
+- Make `build_index.py` build the same retrieval-text corpus `PharmaAssistant` does internally, so its (free, hash-backend-capable) offline cache actually gets recognized and used by the live class — real latency/cost win for cold starts.
 - Add a minimum-similarity threshold to `retrieve()` so genuinely out-of-catalog questions return no products instead of the nearest-but-irrelevant ones.
 - Grow the eval set past a 9-case smoke test, with multiple acceptable products per query so precision@k becomes informative.
 - Record a real demo GIF now that `/greet`/`/answer` work end-to-end from a clean `docker compose up`.

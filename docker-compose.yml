@@ -14,7 +14,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
-      PRELOAD_TENANTS: ${PRELOAD_TENANTS:-client_1,client_2}
+      PRELOAD_TENANTS: ${PRELOAD_TENANTS:-farmacia_carmen_sanjuan}
       # Si quieres que la API lea storage de un path distinto:
       STORAGE_BASE: /app/storage
     volumes:

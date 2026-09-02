@@ -19,7 +19,7 @@ What's real today: `FastAPI` API (`service/main.py`) → per-tenant API-key auth
 - **Generation**: OpenAI chat (`gpt-4o-mini` by default), prompted to only recommend from the product cards it was given
 - **Multi-tenant**: per-tenant catalog/prompts/config (`data/clients/<id>/`, `profiles/clients/<id>.yaml`), per-tenant API key + daily quota (`service/tenants.yaml`)
 - **Observability**: JSON access logs, Prometheus metrics (`/metrics`)
-- **Tests**: pytest, 84+ tests (unit + integration), all mocking OpenAI — see [Evaluation](#evaluation) for the real-API numbers
+- **Tests**: pytest, 86+ tests (unit + integration), all mocking OpenAI — see [Evaluation](#evaluation) for the real-API numbers
 
 ## How to run it
 
@@ -29,18 +29,16 @@ cp .env.example .env
 
 docker compose up --build -d
 curl -s http://localhost:8080/healthz | jq .
+
+curl -s "http://localhost:8080/greet?client_id=farmacia_carmen_sanjuan" \
+  -H "x-api-key: demo_key_farmacia_carmen_sanjuan" | jq .
+
+curl -s -X POST "http://localhost:8080/answer?client_id=farmacia_carmen_sanjuan" \
+  -H "x-api-key: demo_key_farmacia_carmen_sanjuan" -H "content-type: application/json" \
+  -d '{"message":"I have oily skin and want to reduce pores, budget under 30 euros"}' | jq .
 ```
 
-**Honest gap, not glossed over:** `docker-compose.yml` preloads `client_1`/`client_2` (`PRELOAD_TENANTS`), and those are the only tenants in `service/tenants.yaml` — but neither has a catalog/profile on disk. The only tenant with a real, working catalog is `farmacia_carmen_sanjuan`, which isn't registered in `tenants.yaml`. So `/healthz` passes out of the box, but a real `/greet`/`/answer` call needs one of these first:
-
-```bash
-# Option A: add farmacia_carmen_sanjuan to service/tenants.yaml with an api_key, then:
-curl -s "http://localhost:8080/greet?client_id=farmacia_carmen_sanjuan" -H "x-api-key: <the key you set>" | jq .
-
-# Option B: follow docs/getting-started.md to build out client_1's catalog/profile from scratch
-```
-
-This is tracked as the top item in [Known limitations](#known-limitations) — it's a real gap found in this repo, not left implicit.
+Verified end-to-end from a fresh `docker compose up --build`, real OpenAI calls, `farmacia_carmen_sanjuan` (the one tenant with a real catalog) — both calls above come back `200` with a real, grounded recommendation. `client_1`/`client_2` are also in `service/tenants.yaml`, as the worked-example IDs `docs/getting-started.md`/`docs/adding-a-client.md` walk through building from scratch; neither has a catalog on disk yet.
 
 Run tests: `make test` (or `pytest -q`). Run the real eval (costs a few cents in OpenAI credits): `poetry run eval-runner`.
 
@@ -62,6 +60,8 @@ Run tests: `make test` (or `pytest -q`). Run the real eval (costs a few cents in
 **Why it had gone unnoticed:** every single test that exercises these endpoints stubs `get_assistant_for()` out entirely (`monkeypatch.setattr(svc, "get_assistant_for", ...)`) so tests don't need a real OpenAI key. That's the right call for keeping tests fast and free — but it meant the one function that wires a real tenant to real data was never exercised by anything, ever.
 
 **The fix:** `repo_root=Path(".")`, matching the deployment convention the Dockerfile already established. Added a regression test that calls the *real* `get_assistant_for()` (only `PharmaAssistant` itself is stubbed, so no OpenAI call happens) against the real `farmacia_carmen_sanjuan` tenant, and asserts the resolved catalog path actually exists on disk. Verified it fails against the old code and passes against the fix.
+
+**The same bug had a sibling.** After registering `farmacia_carmen_sanjuan` in `service/tenants.yaml` (it wasn't there before — a separate gap, now fixed), a real `docker compose up` call to `/greet` still 500'd, now with `PermissionError: [Errno 13] Permission denied: '../../service'`. `service/quota.py` had the exact same pattern: `QUOTA_BASE_DIR = Path(os.getenv("QUOTA_BASE_DIR", "../../service"))`. Same root cause, different module — fixed the same way (`Path(".")`), and only found because this time the fix was verified against a real running container instead of trusting that a green test suite meant the feature worked. Both `/greet` and `/answer` now return real, grounded `200` responses from a clean `docker compose up` (see [How to run it](#how-to-run-it)).
 
 ## Evaluation
 
@@ -94,19 +94,18 @@ Re-run it yourself: `poetry run eval-runner` (writes a full JSON report to `.eva
 
 ## Known limitations
 
-- **`tenants.yaml` doesn't match the only real tenant.** `client_1`/`client_2` (the only entries in `service/tenants.yaml`, and what `docker-compose.yml` preloads) have no catalog/profile on disk. `farmacia_carmen_sanjuan` (the only tenant with real data) isn't registered for auth. See [How to run it](#how-to-run-it) for the workaround; not yet fixed.
+- **Three incompatible index-storage conventions, so `/readyz` reports `503` even though the product works.** `app/index_cache.py` (`storage/<tenant>/index/`, `meta.json` with a `signature` key) is what the live `PharmaAssistant` class actually uses to serve `/greet`/`/answer` — and it works, verified above. `src/scripts/build_index.py` (with a real deterministic hash-based embedding fallback, `--backend hash`, no OpenAI key needed) writes a *different* shape at `storage/<tenant>/` directly, no `signature` key. `service/index_loader.py` (used by `/readyz` preload and `/tenants/{id}/index/status`) expects that second shape. None of the three were ever wired together — a pre-built index from `build_index.py` is invisible to the live class, and the live class's own cache is invisible to `/readyz`. Not fixed here.
 - **No relevance threshold in retrieval.** `retrieve()` always returns the top-k candidates by similarity, even for genuinely out-of-catalog questions — see [Evaluation](#evaluation). Fixing this is a retrieval-logic change (a minimum similarity score, or a separate in-domain classifier), intentionally not done yet.
-- **The offline `build_index.py` tool and the live app use incompatible index-cache formats.** `src/scripts/build_index.py` has a real deterministic hash-based embedding fallback (`--backend hash`, no OpenAI key needed) — but it writes a `meta.json` without the `signature` field `app/index_cache.py` requires, so the live `PharmaAssistant` class never recognizes a cache built this way and always falls through to real OpenAI calls. The two were never wired together.
 - **No cross-tenant catalog test against the live class** — the [cross-tenant isolation tests](tests/integatrion/test_cross_tenant_isolation.py) verify auth, quota, and config-path resolution don't leak between tenants, all without needing OpenAI; there's no equivalent test using two real, fully-built `PharmaAssistant` instances (that would need two real catalogs' worth of embedding calls per test run).
 - **9-case eval is a smoke test, not a benchmark.** Useful to catch regressions and characterize real behavior (as it did above), not to claim a statistically robust quality number.
-- **No deployed/hosted demo.** A public endpoint backed by real OpenAI calls is a real cost/abuse surface for a portfolio project; verified instead via a real eval run against the live API (above) and `docker compose up` for `/healthz`.
+- **No deployed/hosted demo.** A public endpoint backed by real OpenAI calls is a real cost/abuse surface for a portfolio project; verified instead via a real eval run against the live API and a real `docker compose up` + `/greet`/`/answer` call (both above).
 
 ## What's next
 
-- Register `farmacia_carmen_sanjuan` in `service/tenants.yaml` (or build out `client_1` per `docs/getting-started.md`) so the docker-compose demo works end-to-end without a manual step.
+- Reconcile the three index-storage conventions above so `/readyz` reflects reality and a pre-built `build_index.py` cache actually gets used by the live class (real latency/cost win for cold starts).
 - Add a minimum-similarity threshold to `retrieve()` so genuinely out-of-catalog questions return no products instead of the nearest-but-irrelevant ones.
-- Reconcile `build_index.py`'s hash-backend cache format with `app/index_cache.py` so a pre-built index actually gets used (real latency/cost win for cold starts).
 - Grow the eval set past a 9-case smoke test, with multiple acceptable products per query so precision@k becomes informative.
+- Record a real demo GIF now that `/greet`/`/answer` work end-to-end from a clean `docker compose up`.
 
 ## License
 

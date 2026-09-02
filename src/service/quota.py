@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Tuple
 
 # Permite redirigir la base por entorno (útil en tests/CI)
-QUOTA_BASE_DIR = Path(os.getenv("QUOTA_BASE_DIR", "../../service"))
+QUOTA_BASE_DIR = Path(os.getenv("QUOTA_BASE_DIR", "."))
 
 def _today() -> str:
     # ISO date UTC (YYYY-MM-DD)

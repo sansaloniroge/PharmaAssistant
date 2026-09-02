@@ -6,6 +6,7 @@
 # Ignore FAISS index files
 storage/indexes/*
 storage/*/index/
+storage/*/quota.json
 
 # Bytecode cache
 __pycache__/

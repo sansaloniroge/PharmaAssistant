@@ -1,4 +1,7 @@
 # src/service/tenants.yaml
+# client_1/client_2 are the worked example IDs used throughout docs/ and ops/
+# (getting-started.md, adding-a-client.md, the runbooks) -- follow
+# docs/getting-started.md to actually build out their catalog/profile.
 client_1:
   api_key: "secret_key_client_1"
   max_requests_per_day: 1000
@@ -6,3 +9,9 @@ client_1:
 client_2:
   api_key: "secret_key_client_2"
   max_requests_per_day: 500
+
+# The one tenant with a real, built-out catalog/profile today -- this is
+# what docker-compose.yml preloads by default so the demo works out of the box.
+farmacia_carmen_sanjuan:
+  api_key: "demo_key_farmacia_carmen_sanjuan"
+  max_requests_per_day: 200

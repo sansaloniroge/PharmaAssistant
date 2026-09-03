@@ -6,6 +6,12 @@ A multi-tenant skincare/pharmacy product-recommendation chatbot: retrieval over 
 
 A pharmacy/skincare store wants a chat widget that recommends products from *its own* catalog — not a generic "AI skincare advisor" that might invent a product the store doesn't sell. Each store (tenant) has its own catalog, prompts, and pricing; a customer's question ("something for oily skin under €30") needs to be answered from real inventory, with a graceful "we don't sell that" when it's genuinely out of catalog.
 
+## Demo
+
+![A budget-constrained vitamin C query answered from the real catalog within budget; a pregnancy question triggering an automatic dermatologist safety note](docs/demo.gif)
+
+Two real calls against the running API (no mocking): a price-constrained query comes back with a product genuinely within budget (the deterministic prefilter excluding the pricier option), and a query mentioning a medical term (pregnancy) gets an automatic safety note before the recommendation. Full setup below reproduces this from scratch; `docs/demo.tape` is the [VHS](https://github.com/charmbracelet/vhs) script that generated the GIF (`vhs docs/demo.tape`, API already running against `farmacia_carmen_sanjuan`).
+
 ## Architecture
 
 👉 [Architecture documentation](docs/architecture.md) has the full component diagram, data flows, and contracts.
@@ -100,14 +106,13 @@ Re-run it yourself: `poetry run eval-runner` (writes a full JSON report to `.eva
 - **No relevance threshold in retrieval.** `retrieve()` always returns the top-k candidates by similarity, even for genuinely out-of-catalog questions — see [Evaluation](#evaluation). Fixing this is a retrieval-logic change (a minimum similarity score, or a separate in-domain classifier), intentionally not done yet.
 - **No cross-tenant catalog test against the live class** — the [cross-tenant isolation tests](tests/integatrion/test_cross_tenant_isolation.py) verify auth, quota, and config-path resolution don't leak between tenants, all without needing OpenAI; there's no equivalent test using two real, fully-built `PharmaAssistant` instances (that would need two real catalogs' worth of embedding calls per test run).
 - **9-case eval is a smoke test, not a benchmark.** Useful to catch regressions and characterize real behavior (as it did above), not to claim a statistically robust quality number.
-- **No deployed/hosted demo.** A public endpoint backed by real OpenAI calls is a real cost/abuse surface for a portfolio project; verified instead via a real eval run against the live API and a real `docker compose up` + `/greet`/`/answer` call (both above).
+- **No deployed/hosted demo.** A public endpoint backed by real OpenAI calls is a real cost/abuse surface for a portfolio project; verified instead via a real eval run against the live API, a real `docker compose up` + `/greet`/`/answer` call, and the recorded demo above.
 
 ## What's next
 
 - Make `build_index.py` build the same retrieval-text corpus `PharmaAssistant` does internally, so its (free, hash-backend-capable) offline cache actually gets recognized and used by the live class — real latency/cost win for cold starts.
 - Add a minimum-similarity threshold to `retrieve()` so genuinely out-of-catalog questions return no products instead of the nearest-but-irrelevant ones.
 - Grow the eval set past a 9-case smoke test, with multiple acceptable products per query so precision@k becomes informative.
-- Record a real demo GIF now that `/greet`/`/answer` work end-to-end from a clean `docker compose up`.
 
 ## License
 

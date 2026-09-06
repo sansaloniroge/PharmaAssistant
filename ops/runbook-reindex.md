@@ -1,5 +1,7 @@
 # Runbook — Reindexación (catálogos/índices)
 
+> **Nota de ruta:** el índice real que usa la API en serving se reconstruye solo (primer request tras invalidar la firma) en `storage/<id>/index/` — ver `docs/configuration.md#25-storage-de-índices-storageidindex`. Los comandos de este runbook usan `scripts/build_index.py`, que escribe en `storage/<id>/` (sin `index/`) — hoy una herramienta offline desconectada de lo que lee la API. Para forzar la reconstrucción del índice real, borra `storage/<id>/index/` y deja que el primer request lo regenere.
+
 Procedimiento operativo para **reconstruir los índices** de uno o varios tenants cuando cambian los catálogos CSV, prompts o el backend de embeddings.
 
 ---

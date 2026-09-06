@@ -1,22 +1,10 @@
-from pathlib import Path
-import tempfile
-import shutil
 import pytest
 from fastapi.testclient import TestClient
 
 import service.main as svc
-import service.quota as quota
 
-@pytest.fixture(autouse=True)
-def tmp_quota_dir(monkeypatch):
-    # Forzamos la base de cuotas a un directorio temporal
-    d = Path(tempfile.mkdtemp(prefix="pa_quota_"))
-    monkeypatch.setenv("QUOTA_BASE_DIR", str(d))
-    # recargar módulo quota para que coja el nuevo env
-    import importlib
-    importlib.reload(quota)
-    yield d
-    shutil.rmtree(d, ignore_errors=True)
+# Quota storage isolation is handled by the autouse `_isolated_quota_storage`
+# fixture in tests/conftest.py.
 
 @pytest.fixture(autouse=True)
 def tenants_with_limit(monkeypatch):

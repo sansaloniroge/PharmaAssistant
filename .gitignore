@@ -5,6 +5,8 @@
 
 # Ignore FAISS index files
 storage/indexes/*
+storage/*/index/
+storage/*/quota.json
 
 # Bytecode cache
 __pycache__/
@@ -17,8 +19,12 @@ __pycache__/
 .DS_Store
 
 stubs/
-deploy/helm/**
+.eval_artifacts/
 .github/
 .git
 *.pyc
 __MACOSX/
+
+#Claude Code support files
+CLAUDE.md
+PORTFOLIO_GOALS.md

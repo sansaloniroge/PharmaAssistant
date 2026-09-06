@@ -430,9 +430,6 @@ class PharmaAssistant:
             {"role": "user", "content": seed},
         ]
         text = self._chat(messages)
-
-        # Use the shared retrying chat helper
-        text = self._chat(messages)
         if text:
             return text
 
@@ -476,9 +473,6 @@ class PharmaAssistant:
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": compose},
         ]
-        text = self._chat(messages)
-
-        # Use the shared retrying chat helper
         text = self._chat(messages)
         sources = [self.cards[i].get("product_name") or f"row {i}" for i in idxs]
         if text:
